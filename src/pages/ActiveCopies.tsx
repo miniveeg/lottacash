@@ -32,7 +32,9 @@ export function ActiveCopies() {
     <div className="page active-copies">
       <div className="page-header">
         <h1>My Copies</h1>
-        <p>Wallets you are configured to mirror. Settings are stored locally in this browser for now.</p>
+        <p>
+          Wallets you are configured to mirror. Settings are stored locally in this browser for now.
+        </p>
       </div>
 
       {!connected && (
@@ -58,13 +60,10 @@ export function ActiveCopies() {
                   <div className="mono">{shortAddress(c.targetAddress, 6)}</div>
                   {meta?.label && <div className="label-tag">{meta.label}</div>}
                   <div className="copy-meta">
-                    {c.sizeMode === 'fixed'
-                      ? `${c.fixedSol} SOL fixed`
-                      : 'Proportional 1:1'}
-                    {' · '}
-                    max {c.maxSol} SOL
-                    {' · '}
+                    {c.sizeMode === 'fixed' ? `${c.fixedSol} SOL fixed` : 'Proportional 1:1'}
+                    {' · '}max {c.maxSol} SOL{' · '}
                     {(c.slippageBps / 100).toFixed(1)}% slip
+                    {c.enabled ? ' · ON' : ' · OFF'}
                   </div>
                 </div>
                 <div className="copy-card-actions">
@@ -90,9 +89,8 @@ export function ActiveCopies() {
       )}
 
       <div className="notice small" style={{ marginTop: '2rem' }}>
-        <strong>Next:</strong> Real-time monitoring will watch these enabled wallets and surface
-        signable Jupiter swaps when they trade. Persistence will move to a proper backend so
-        settings sync across devices.
+        <strong>Tip:</strong> After enabling a copy, open <Link to="/activity">Activity</Link> and
+        generate a demo signal to test the Jupiter sign flow.
       </div>
     </div>
   )

@@ -9,12 +9,14 @@ export function Topbar() {
           Lotta<span>Cash</span>
         </Link>
 
-        <nav className="nav">
+        <nav className="nav desktop-nav">
           <NavLink to="/" end>
             Home
           </NavLink>
           <NavLink to="/leaderboard">Leaderboard</NavLink>
           <NavLink to="/copies">My Copies</NavLink>
+          <NavLink to="/activity">Activity</NavLink>
+          <NavLink to="/settings">Settings</NavLink>
         </nav>
 
         <div className="wallet-btn">

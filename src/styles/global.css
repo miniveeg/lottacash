@@ -6,7 +6,6 @@
   --text: #e8eaed;
   --text-muted: #9aa0a6;
   --accent: #14f195;
-  --accent-dim: #0d9b6a;
   --danger: #ff6b6b;
   --positive: #14f195;
   --negative: #ff6b6b;
@@ -33,10 +32,19 @@ a {
   text-decoration: none;
 }
 
+code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.9em;
+  background: var(--surface-2);
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+}
+
 .app {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  padding-bottom: 64px;
 }
 
 .main {
@@ -97,6 +105,33 @@ a {
   margin-left: auto;
 }
 
+/* Mobile bottom nav */
+.mobile-nav {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(11, 13, 16, 0.95);
+  border-top: 1px solid var(--border);
+  padding: 0.5rem 0.75rem calc(0.5rem + env(safe-area-inset-bottom));
+  z-index: 60;
+  justify-content: space-around;
+  gap: 0.25rem;
+}
+
+.mobile-nav a {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  padding: 0.4rem 0.5rem;
+  border-radius: 8px;
+}
+
+.mobile-nav a.active {
+  color: var(--accent);
+  background: rgba(20, 241, 149, 0.08);
+}
+
 /* Buttons */
 .btn {
   display: inline-flex;
@@ -147,6 +182,12 @@ a {
 .btn.small:hover {
   border-color: var(--accent);
   color: var(--accent);
+}
+
+.btn.small.primary {
+  background: var(--accent);
+  color: #0b0d10;
+  border-color: var(--accent);
 }
 
 .btn.danger {
@@ -427,6 +468,11 @@ a {
 
 .empty p {
   color: var(--text-muted);
+  margin-bottom: 0.75rem;
+}
+
+.empty .hint {
+  font-size: 0.9rem;
   margin-bottom: 1.25rem;
 }
 
@@ -475,6 +521,105 @@ a {
   cursor: pointer;
 }
 
+/* Activity */
+.activity-toolbar {
+  margin-bottom: 1.25rem;
+}
+
+.signals-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.signal-card {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+  flex-wrap: wrap;
+}
+
+.signal-title {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.25rem;
+}
+
+.side {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+}
+
+.side.buy {
+  background: rgba(20, 241, 149, 0.15);
+  color: var(--positive);
+}
+
+.side.sell {
+  background: rgba(255, 107, 107, 0.15);
+  color: var(--negative);
+}
+
+.signal-meta {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.tx-link {
+  display: inline-block;
+  margin-top: 0.35rem;
+  font-size: 0.85rem;
+  color: var(--accent);
+}
+
+.error-text {
+  margin-top: 0.35rem;
+  font-size: 0.85rem;
+  color: var(--danger);
+}
+
+.signal-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+}
+
+/* Settings */
+.settings-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.settings-card h3 {
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.settings-card p {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+
+.settings-card .hint {
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.settings-card.danger-zone {
+  border-color: rgba(255, 107, 107, 0.35);
+}
+
 /* Footer */
 .footer {
   border-top: 1px solid var(--border);
@@ -510,17 +655,18 @@ a {
   color: #0b0d10 !important;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 768px) {
+  .desktop-nav {
+    display: none;
+  }
+  .mobile-nav {
+    display: flex;
+  }
   .hero h1 {
     font-size: 1.85rem;
   }
-  .topbar-inner {
-    gap: 1rem;
-  }
-  .nav {
-    display: none;
-  }
-  .copy-card {
+  .copy-card,
+  .signal-card {
     flex-direction: column;
     align-items: flex-start;
   }

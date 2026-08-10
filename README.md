@@ -1,67 +1,79 @@
 # LottaCash — Solana Copy Trading
 
-Non-custodial Solana copy trading platform for **lottacash.us**.
+Non-custodial Solana copy trading for **lottacash.us**.
 
-Users connect their own wallet. The platform never generates or holds private keys.  
-Trades are prepared (Jupiter) and signed by the user.
+You connect your own wallet. The app never generates or stores private keys.  
+Trades are prepared with Jupiter and **signed by you**.
 
-## Current Status
+## What’s built
 
-- ✅ Vite + React + TypeScript scaffold
-- ✅ Solana wallet adapter (Phantom, Solflare)
-- ✅ Leaderboard UI with Daily / Weekly / All-time tabs
-- ✅ Copy configuration (fixed SOL or proportional + max + slippage)
-- ✅ Local persistence of copy settings (`localStorage`)
-- ✅ Active Copies page (enable / disable / edit / remove)
-- ✅ Jupiter quote + swap helpers ready for real integration
-- ⏳ Real wallet ranking data pipeline
-- ⏳ Real-time target wallet monitoring
-- ⏳ Push prepared transactions to the connected wallet for signing
-- ⏳ Backend persistence + multi-device sync
+- Wallet connect (Phantom, Solflare)
+- Leaderboard (Daily / Weekly / All-time) — mock data, ready for real ranking API
+- Copy setup: fixed SOL **or** proportional, max cap, slippage
+- Local persistence of copy configs
+- **My Copies** management (on/off/edit/remove)
+- **Activity** page with demo trade signals
+- **Full Jupiter quote → user sign → send** demo path
+- Monitoring architecture stubs (`src/lib/monitor.ts`)
+- Configurable RPC via `.env`
+- Mobile bottom navigation
+- Settings + risk reminders
 
-## Quick Start
+## Quick start
 
 ```bash
 git clone https://github.com/miniveeg/lottacash.git
 cd lottacash
+cp .env.example .env   # optional: set your RPC
 npm install
 npm run dev
 ```
 
 Open http://localhost:5173
 
-## Architecture (non-custodial)
+### Test the signing flow
 
-1. User connects existing wallet.
-2. User selects target wallets + sizing rules.
-3. Backend (future) monitors target addresses.
-4. On detected trade → Jupiter quote → build unsigned swap.
-5. Frontend asks the user to sign.
-6. User remains in full control of funds at every step.
+1. Connect wallet  
+2. Leaderboard → Copy a wallet → save settings (enabled)  
+3. **Activity** → **Generate demo signal**  
+4. **Sign swap** (uses a small real Jupiter quote path; be careful on mainnet)
 
-## Key files
+Use **devnet** + a private RPC when testing real sends.
 
-| Path | Purpose |
-|------|--------|
-| `src/lib/copyStore.ts` | Local copy config persistence |
-| `src/lib/jupiter.ts` | Quote + swap transaction helpers |
-| `src/lib/mockData.ts` | Temporary leaderboard data |
-| `src/pages/Leaderboard.tsx` | Ranked wallets |
-| `src/pages/CopySetup.tsx` | Per-wallet copy settings |
-| `src/pages/ActiveCopies.tsx` | Manage active copies |
+## Architecture
 
-## Next engineering steps
+```
+User wallet ──connect──▶ App
+                          │
+                 save CopyConfig (local / future backend)
+                          │
+         [future] Monitor target wallets (Helius / gRPC)
+                          │
+                 TradeSignal created
+                          │
+              Jupiter quote + swap tx
+                          │
+                 User signs in wallet
+                          │
+                    Tx on-chain
+```
 
-1. Replace `mockData` with a real ranking source (Helius / Bitquery / custom indexer).
-2. Add a lightweight backend (or Supabase Edge Functions) to store configs per wallet and emit trade signals.
-3. Wire monitoring → Jupiter → `signTransaction` flow.
-4. Add positions / trade history view.
-5. Stronger risk controls (token denylist, max daily volume, kill switch).
+## Env
 
-## Domain
+See `.env.example`:
 
-lottacash.us
+- `VITE_SOLANA_RPC_URL` — private RPC recommended
+- `VITE_SOLANA_NETWORK` — `mainnet-beta` or `devnet`
 
----
+## Still needed for production
 
-**Important:** This is not financial advice. Copy trading is high risk. Users can lose their entire balance.
+1. Real profitable-wallet ranking pipeline  
+2. Backend (or Supabase) for configs + multi-device sync  
+3. Live wallet monitoring (webhooks / gRPC)  
+4. Signal delivery to the correct user  
+5. Token safety filters, max daily loss, kill switch  
+6. Hosting on lottacash.us (Vercel works well)
+
+## License
+
+Proprietary — LottaCash.
