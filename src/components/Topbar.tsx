@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom'
+import { Link, NavLink } from 'react-router-dom'
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui'
 
 export function Topbar() {
@@ -10,8 +10,11 @@ export function Topbar() {
         </Link>
 
         <nav className="nav">
-          <Link to="/">Home</Link>
-          <Link to="/leaderboard">Leaderboard</Link>
+          <NavLink to="/" end>
+            Home
+          </NavLink>
+          <NavLink to="/leaderboard">Leaderboard</NavLink>
+          <NavLink to="/copies">My Copies</NavLink>
         </nav>
 
         <div className="wallet-btn">

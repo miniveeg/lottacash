@@ -1,18 +1,39 @@
+import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { MOCK_WALLETS } from '../lib/mockData'
+import { getLeaderboard } from '../lib/mockData'
+import type { Timeframe } from '../lib/types'
+import { shortAddress, formatSol, formatPct } from '../lib/format'
+
+const TABS: { id: Timeframe; label: string }[] = [
+  { id: 'daily', label: 'Daily' },
+  { id: 'weekly', label: 'Weekly' },
+  { id: 'all', label: 'All Time' },
+]
 
 export function Leaderboard() {
+  const [timeframe, setTimeframe] = useState<Timeframe>('weekly')
+  const wallets = useMemo(() => getLeaderboard(timeframe), [timeframe])
+
   return (
     <div className="page leaderboard">
       <div className="page-header">
         <h1>Top Wallets</h1>
-        <p>Ranked by realized PnL. Data is currently mocked — real pipeline coming next.</p>
+        <p>
+          Ranked by realized PnL. Currently using high-quality mock data — real ranking pipeline
+          plugs in here next.
+        </p>
       </div>
 
       <div className="tabs">
-        <button className="tab active">Daily</button>
-        <button className="tab">Weekly</button>
-        <button className="tab">All Time</button>
+        {TABS.map((t) => (
+          <button
+            key={t.id}
+            className={`tab ${timeframe === t.id ? 'active' : ''}`}
+            onClick={() => setTimeframe(t.id)}
+          >
+            {t.label}
+          </button>
+        ))}
       </div>
 
       <div className="table-wrap">
@@ -28,14 +49,17 @@ export function Leaderboard() {
             </tr>
           </thead>
           <tbody>
-            {MOCK_WALLETS.map((w, i) => (
+            {wallets.map((w, i) => (
               <tr key={w.address}>
                 <td>{i + 1}</td>
-                <td className="mono">{w.address.slice(0, 4)}…{w.address.slice(-4)}</td>
-                <td className={w.pnl >= 0 ? 'positive' : 'negative'}>
-                  {w.pnl >= 0 ? '+' : ''}{w.pnl.toFixed(2)}
+                <td>
+                  <div className="wallet-cell">
+                    <span className="mono">{shortAddress(w.address)}</span>
+                    {w.label && <span className="label-tag">{w.label}</span>}
+                  </div>
                 </td>
-                <td>{(w.winRate * 100).toFixed(1)}%</td>
+                <td className={w.pnl >= 0 ? 'positive' : 'negative'}>{formatSol(w.pnl)}</td>
+                <td>{formatPct(w.winRate)}</td>
                 <td>{w.trades}</td>
                 <td>
                   <Link to={`/copy/${w.address}`} className="btn small">

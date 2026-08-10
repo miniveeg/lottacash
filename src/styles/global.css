@@ -88,7 +88,8 @@ a {
   transition: color 0.15s;
 }
 
-.nav a:hover {
+.nav a:hover,
+.nav a.active {
   color: var(--text);
 }
 
@@ -107,7 +108,7 @@ a {
   font-size: 0.95rem;
   border: none;
   cursor: pointer;
-  transition: background 0.15s, opacity 0.15s;
+  transition: background 0.15s, opacity 0.15s, border-color 0.15s;
 }
 
 .btn.primary {
@@ -124,6 +125,17 @@ a {
   cursor: not-allowed;
 }
 
+.btn.ghost {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+.btn.ghost:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 .btn.small {
   padding: 0.35rem 0.75rem;
   font-size: 0.85rem;
@@ -135,6 +147,21 @@ a {
 .btn.small:hover {
   border-color: var(--accent);
   color: var(--accent);
+}
+
+.btn.danger {
+  background: transparent;
+  border: 1px solid var(--danger);
+  color: var(--danger);
+}
+
+.btn.danger:hover {
+  background: rgba(255, 107, 107, 0.12);
+}
+
+.btn.small.danger {
+  border-color: var(--danger);
+  color: var(--danger);
 }
 
 /* Pages */
@@ -165,7 +192,7 @@ a {
 /* Home */
 .hero {
   text-align: center;
-  padding: 3rem 0 4rem;
+  padding: 3rem 0 3rem;
 }
 
 .hero h1 {
@@ -185,6 +212,7 @@ a {
   display: flex;
   justify-content: center;
   gap: 1rem;
+  flex-wrap: wrap;
 }
 
 .features {
@@ -211,11 +239,34 @@ a {
   font-size: 0.95rem;
 }
 
+.how {
+  margin-top: 3rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.75rem;
+}
+
+.how h2 {
+  font-size: 1.2rem;
+  margin-bottom: 1rem;
+}
+
+.how ol {
+  padding-left: 1.25rem;
+  color: var(--text-muted);
+}
+
+.how li {
+  margin-bottom: 0.5rem;
+}
+
 /* Leaderboard */
 .tabs {
   display: flex;
   gap: 0.5rem;
   margin-bottom: 1.5rem;
+  flex-wrap: wrap;
 }
 
 .tab {
@@ -264,6 +315,22 @@ a {
   border-bottom: none;
 }
 
+.wallet-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.label-tag {
+  font-size: 0.75rem;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  color: var(--text-muted);
+}
+
 .mono {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 0.9em;
@@ -297,7 +364,7 @@ a {
   margin-bottom: 0.4rem;
 }
 
-.field input[type="number"] {
+.field input[type='number'] {
   width: 100%;
   background: var(--surface-2);
   border: 1px solid var(--border);
@@ -313,7 +380,8 @@ a {
   gap: 0.5rem;
 }
 
-.radio-group label {
+.radio-group label,
+.checkbox-label {
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -336,10 +404,75 @@ a {
   margin-bottom: 1.5rem;
 }
 
+.form-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
 .connected-as {
   margin-top: 1rem;
   font-size: 0.85rem;
   color: var(--text-muted);
+}
+
+/* Active copies */
+.empty {
+  text-align: center;
+  padding: 3rem 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.empty p {
+  color: var(--text-muted);
+  margin-bottom: 1.25rem;
+}
+
+.copies-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.copy-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+  flex-wrap: wrap;
+}
+
+.copy-card-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.copy-meta {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.copy-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.switch {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  cursor: pointer;
 }
 
 /* Footer */
@@ -359,7 +492,7 @@ a {
   opacity: 0.8;
 }
 
-/* Wallet adapter button overrides */
+/* Wallet adapter overrides */
 .wallet-adapter-button {
   background-color: var(--surface-2) !important;
   border: 1px solid var(--border) !important;
@@ -386,5 +519,9 @@ a {
   }
   .nav {
     display: none;
+  }
+  .copy-card {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }
