@@ -126,7 +126,8 @@ export function CopySetup() {
           <div className="field">
             <label>Max slippage %</label>
             <input
-              type="number"	colorbox step="0.1"
+              type="number"
+              step="0.1"
               min="0.1"
               value={slippage}
               onChange={(e) => setSlippage(e.target.value)}
