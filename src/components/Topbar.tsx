@@ -5,11 +5,11 @@ export function Topbar() {
   return (
     <header className="topbar">
       <div className="topbar-inner">
-        <Link to="/" className="logo">
+        <Link to="/" className="logo" aria-label="LottaCash home">
           Lotta<span>Cash</span>
         </Link>
 
-        <nav className="nav desktop-nav">
+        <nav className="nav desktop-nav" aria-label="Main">
           <NavLink to="/dashboard">Dashboard</NavLink>
           <NavLink to="/leaderboard">Leaderboard</NavLink>
           <NavLink to="/tools">Tools</NavLink>
