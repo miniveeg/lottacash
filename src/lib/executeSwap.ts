@@ -4,42 +4,39 @@ import { getJupiterQuote, getJupiterSwapTransaction, solToLamports, SOL_MINT } f
 import { getConnection } from './connection'
 
 /**
- * Full demo flow:
- * 1. Get Jupiter quote for SOL -> target mint (or reverse on sell)
- * 2. Build swap transaction
- * 3. User signs via wallet adapter
- * 4. Send raw transaction
- *
- * For a real copy: target mint and side come from the monitored trade.
+ * Demo / practice swap flow:
+ * quote → build → user signs → send → confirm
  */
 export async function executeDemoSwap(opts: {
   wallet: WalletContextState
   side: 'buy' | 'sell'
-  /** For buy: output mint. For sell: input mint (token being sold). */
   tokenMint: string
   solAmount: number
   slippageBps: number
 }): Promise<string> {
   const { wallet, side, tokenMint, solAmount, slippageBps } = opts
 
-  if (!wallet.publicKey || !wallet.signTransaction) {
-    throw new Error('Wallet not connected or does not support signing')
+  if (!wallet.publicKey) {
+    throw new Error('Wallet not connected')
+  }
+  if (!wallet.signTransaction) {
+    throw new Error('This wallet cannot sign transactions in the browser')
   }
 
   const lamports = solToLamports(solAmount)
   if (lamports <= 0) throw new Error('Invalid amount')
 
-  // Demo uses SOL <-> token. Real copy uses the exact mint from the target trade.
   const inputMint = side === 'buy' ? SOL_MINT : tokenMint
   const outputMint = side === 'buy' ? tokenMint : SOL_MINT
 
-  // For sell demo we still size in SOL terms approximately; production needs token balance sizing.
-  const amount = side === 'buy' ? lamports : lamports
+  if (inputMint === outputMint) {
+    throw new Error('Input and output mint cannot be the same')
+  }
 
   const quote = await getJupiterQuote({
     inputMint,
     outputMint,
-    amount,
+    amount: lamports,
     slippageBps,
   })
 
@@ -48,16 +45,30 @@ export async function executeDemoSwap(opts: {
     userPublicKey: wallet.publicKey.toBase58(),
   })
 
-  const txBuf = Buffer.from(swapTransaction, 'base64')
-  const vtx = VersionedTransaction.deserialize(txBuf)
+  if (!swapTransaction) {
+    throw new Error('Jupiter did not return a swap transaction')
+  }
+
+  const raw = Uint8Array.from(atob(swapTransaction), (c) => c.charCodeAt(0))
+  const vtx = VersionedTransaction.deserialize(raw)
 
   const signed = await wallet.signTransaction(vtx)
   const connection = getConnection()
+
   const sig = await connection.sendRawTransaction(signed.serialize(), {
     skipPreflight: false,
     maxRetries: 3,
   })
 
-  await connection.confirmTransaction(sig, 'confirmed')
+  const latest = await connection.getLatestBlockhash('confirmed')
+  await connection.confirmTransaction(
+    {
+      signature: sig,
+      blockhash: latest.blockhash,
+      lastValidBlockHeight: latest.lastValidBlockHeight,
+    },
+    'confirmed'
+  )
+
   return sig
 }

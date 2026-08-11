@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 
-export function HelpTip({ title, children }: { title?: string; children: React.ReactNode }) {
+export function HelpTip({ title, children }: { title?: string; children: ReactNode }) {
   const [open, setOpen] = useState(false)
   return (
     <div className={`help-tip ${open ? 'open' : ''}`}>

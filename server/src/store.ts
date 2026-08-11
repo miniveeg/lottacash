@@ -24,7 +24,9 @@ function readJson<T>(file: string, fallback: T): T {
 
 function writeJson(file: string, data: unknown) {
   ensureDataDir()
-  fs.writeFileSync(file, JSON.stringify(data, null, 2), 'utf8')
+  const tmp = `${file}.tmp`
+  fs.writeFileSync(tmp, JSON.stringify(data, null, 2), 'utf8')
+  fs.renameSync(tmp, file)
 }
 
 export function listConfigs(ownerWallet?: string): CopyConfig[] {
@@ -77,7 +79,6 @@ export function updateSignal(
   return all[idx]
 }
 
-/** All enabled target addresses currently being copied by anyone */
 export function listWatchedTargets(): string[] {
   const all = listConfigs()
   return [...new Set(all.filter((c) => c.enabled).map((c) => c.targetAddress))]

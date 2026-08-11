@@ -21,6 +21,11 @@ const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET || 'dev-secret-change-me'
 app.use(cors({ origin: true }))
 app.use(express.json({ limit: '1mb' }))
 
+function finiteNumber(value: unknown, fallback: number): number {
+  const n = Number(value)
+  return Number.isFinite(n) ? n : fallback
+}
+
 app.get('/api/health', (_req, res) => {
   res.json({ ok: true, service: 'lottacash-server', time: Date.now() })
 })
@@ -31,29 +36,34 @@ app.get('/api/leaderboard', (req, res) => {
   res.json({ timeframe, wallets: getLeaderboard(timeframe) })
 })
 
-/** List copy configs for a wallet */
 app.get('/api/configs', (req, res) => {
-  const owner = String(req.query.owner || '')
+  const owner = String(req.query.owner || '').trim()
   if (!owner) return res.status(400).json({ error: 'owner query required' })
   res.json({ configs: listConfigs(owner) })
 })
 
-/** Create / update a copy config */
 app.post('/api/configs', (req, res) => {
   const body = req.body as Partial<CopyConfig>
-  if (!body.ownerWallet || !body.targetAddress) {
+  const ownerWallet = String(body.ownerWallet || '').trim()
+  const targetAddress = String(body.targetAddress || '').trim()
+  if (!ownerWallet || !targetAddress) {
     return res.status(400).json({ error: 'ownerWallet and targetAddress required' })
   }
+
   const now = Date.now()
-  const existing = listConfigs(body.ownerWallet).find((c) => c.targetAddress === body.targetAddress)
+  const existing = listConfigs(ownerWallet).find((c) => c.targetAddress === targetAddress)
+  const fixedSol = Math.max(0.01, finiteNumber(body.fixedSol, 0.5))
+  const maxSol = Math.max(fixedSol, finiteNumber(body.maxSol, 5))
+  const slippageBps = Math.min(5000, Math.max(1, Math.round(finiteNumber(body.slippageBps, 200))))
+
   const config: CopyConfig = {
     id: existing?.id || randomUUID(),
-    ownerWallet: body.ownerWallet,
-    targetAddress: body.targetAddress,
+    ownerWallet,
+    targetAddress,
     sizeMode: body.sizeMode === 'proportional' ? 'proportional' : 'fixed',
-    fixedSol: Number(body.fixedSol ?? 0.5),
-    maxSol: Number(body.maxSol ?? 5),
-    slippageBps: Number(body.slippageBps ?? 200),
+    fixedSol,
+    maxSol,
+    slippageBps,
     enabled: body.enabled !== false,
     createdAt: existing?.createdAt || now,
     updatedAt: now,
@@ -63,31 +73,45 @@ app.post('/api/configs', (req, res) => {
 })
 
 app.delete('/api/configs', (req, res) => {
-  const owner = String(req.query.owner || '')
-  const target = String(req.query.target || '')
+  const owner = String(req.query.owner || '').trim()
+  const target = String(req.query.target || '').trim()
   if (!owner || !target) return res.status(400).json({ error: 'owner and target required' })
   deleteConfig(owner, target)
   res.json({ ok: true })
 })
 
 app.get('/api/signals', (req, res) => {
-  const owner = String(req.query.owner || '')
+  const owner = String(req.query.owner || '').trim()
   if (!owner) return res.status(400).json({ error: 'owner query required' })
   res.json({ signals: listSignals(owner) })
 })
 
 app.patch('/api/signals/:id', (req, res) => {
-  const updated = updateSignal(req.params.id, req.body || {})
+  const id = String(req.params.id || '')
+  const body = (req.body || {}) as Partial<TradeSignal>
+  const allowedStatus = ['pending', 'signed', 'dismissed', 'failed'] as const
+  const patch: Partial<Pick<TradeSignal, 'status' | 'txSignature' | 'error'>> = {}
+
+  if (body.status && (allowedStatus as readonly string[]).includes(body.status)) {
+    patch.status = body.status
+  }
+  if (typeof body.txSignature === 'string') patch.txSignature = body.txSignature
+  if (typeof body.error === 'string') patch.error = body.error
+
+  const updated = updateSignal(id, patch)
   if (!updated) return res.status(404).json({ error: 'not found' })
   res.json({ signal: updated })
 })
 
-/** Manual demo signal (mirrors frontend demo button, but server-side) */
 app.post('/api/signals/demo', (req, res) => {
-  const { ownerWallet, targetAddress, side } = req.body || {}
+  const ownerWallet = String(req.body?.ownerWallet || '').trim()
+  const targetAddress = String(req.body?.targetAddress || '').trim()
+  const side = req.body?.side === 'sell' ? 'sell' : 'buy'
+
   if (!ownerWallet || !targetAddress) {
     return res.status(400).json({ error: 'ownerWallet and targetAddress required' })
   }
+
   const cfg = listConfigs(ownerWallet).find((c) => c.targetAddress === targetAddress)
   const suggested =
     cfg?.sizeMode === 'fixed'
@@ -98,10 +122,10 @@ app.post('/api/signals/demo', (req, res) => {
     id: randomUUID(),
     ownerWallet,
     targetAddress,
-    side: side === 'sell' ? 'sell' : 'buy',
+    side,
     tokenMint: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
     tokenSymbol: 'USDC',
-    suggestedSol: suggested,
+    suggestedSol: Math.max(0.01, suggested),
     detectedAt: Date.now(),
     status: 'pending',
   }
@@ -109,24 +133,16 @@ app.post('/api/signals/demo', (req, res) => {
   res.json({ signal })
 })
 
-/**
- * Webhook for external monitors (e.g. Helius address activity).
- * Header: x-webhook-secret must match WEBHOOK_SECRET
- *
- * Body example:
- * {
- *   "targetAddress": "...",
- *   "side": "buy",
- *   "tokenMint": "...",
- *   "tokenSymbol": "BONK",
- *   "amountSolApprox": 1.2
- * }
- */
 app.post('/api/webhook/trade', (req, res) => {
   const secret = req.header('x-webhook-secret')
   if (secret !== WEBHOOK_SECRET) return res.status(401).json({ error: 'unauthorized' })
 
-  const { targetAddress, side, tokenMint, tokenSymbol, amountSolApprox } = req.body || {}
+  const targetAddress = String(req.body?.targetAddress || '').trim()
+  const tokenMint = String(req.body?.tokenMint || '').trim()
+  const tokenSymbol = req.body?.tokenSymbol ? String(req.body.tokenSymbol) : undefined
+  const side = req.body?.side === 'sell' ? 'sell' : 'buy'
+  const amountSolApprox = finiteNumber(req.body?.amountSolApprox, 0.5)
+
   if (!targetAddress || !tokenMint) {
     return res.status(400).json({ error: 'targetAddress and tokenMint required' })
   }
@@ -135,10 +151,7 @@ app.post('/api/webhook/trade', (req, res) => {
   const created: TradeSignal[] = []
 
   for (const cfg of configs) {
-    let suggested =
-      cfg.sizeMode === 'fixed'
-        ? cfg.fixedSol
-        : Number(amountSolApprox || 0.5)
+    let suggested = cfg.sizeMode === 'fixed' ? cfg.fixedSol : amountSolApprox
     suggested = Math.min(suggested, cfg.maxSol)
     if (suggested <= 0) continue
 
@@ -146,7 +159,7 @@ app.post('/api/webhook/trade', (req, res) => {
       id: randomUUID(),
       ownerWallet: cfg.ownerWallet,
       targetAddress,
-      side: side === 'sell' ? 'sell' : 'buy',
+      side,
       tokenMint,
       tokenSymbol,
       suggestedSol: suggested,
@@ -162,6 +175,11 @@ app.post('/api/webhook/trade', (req, res) => {
 
 app.get('/api/watched', (_req, res) => {
   res.json({ targets: listWatchedTargets() })
+})
+
+app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  console.error(err)
+  res.status(500).json({ error: 'internal_error' })
 })
 
 app.listen(PORT, () => {

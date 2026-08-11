@@ -1,10 +1,13 @@
-import { Connection, PublicKey, LAMPORTS_PER_SOL } from '@solana/web3.js'
+import { PublicKey, LAMPORTS_PER_SOL } from '@solana/web3.js'
 import { getConnection } from './connection'
 
 export function isValidSolanaAddress(address: string): boolean {
+  if (!address || typeof address !== 'string') return false
   try {
-    const pk = new PublicKey(address)
-    return PublicKey.isOnCurve(pk.toBytes()) || true
+    // Throws if base58 / length invalid
+    // eslint-disable-next-line no-new
+    new PublicKey(address.trim())
+    return true
   } catch {
     return false
   }
@@ -12,14 +15,14 @@ export function isValidSolanaAddress(address: string): boolean {
 
 export async function getSolBalance(address: string): Promise<number> {
   const connection = getConnection()
-  const pk = new PublicKey(address)
+  const pk = new PublicKey(address.trim())
   const lamports = await connection.getBalance(pk, 'confirmed')
   return lamports / LAMPORTS_PER_SOL
 }
 
 export async function getRecentSignatures(address: string, limit = 12) {
   const connection = getConnection()
-  const pk = new PublicKey(address)
+  const pk = new PublicKey(address.trim())
   return connection.getSignaturesForAddress(pk, { limit })
 }
 
@@ -38,9 +41,8 @@ export function computeCopySize(opts: {
   maxSol: number
   leaderSol?: number
 }): number {
-  if (opts.mode === 'fixed') return Math.min(opts.fixedSol, opts.maxSol)
+  const max = Math.max(0, opts.maxSol || 0)
+  if (opts.mode === 'fixed') return Math.min(Math.max(0, opts.fixedSol || 0), max)
   const leader = opts.leaderSol ?? 1
-  return Math.min(Math.max(leader, 0.01), opts.maxSol)
+  return Math.min(Math.max(leader, 0.01), max || leader)
 }
-
-export type { Connection }

@@ -1,20 +1,9 @@
-/**
- * Jupiter helpers (quote + swap construction).
- *
- * These are structured for real integration.
- * For production you will call:
- *   GET https://quote-api.jup.ag/v6/quote
- *   POST https://quote-api.jup.ag/v6/swap
- *
- * Then send the returned transaction to the user's wallet for signing.
- */
-
 export const SOL_MINT = 'So11111111111111111111111111111111111111112'
 
 export interface QuoteParams {
   inputMint: string
   outputMint: string
-  amount: number // in smallest units (lamports for SOL)
+  amount: number
   slippageBps: number
 }
 
@@ -27,15 +16,12 @@ export async function getJupiterQuote(params: QuoteParams): Promise<unknown> {
 
   const res = await fetch(url.toString())
   if (!res.ok) {
-    throw new Error(`Jupiter quote failed: ${res.status}`)
+    const body = await res.text().catch(() => '')
+    throw new Error(`Jupiter quote failed (${res.status})${body ? `: ${body.slice(0, 180)}` : ''}`)
   }
   return res.json()
 }
 
-/**
- * Build a swap transaction for the user to sign.
- * Requires a connected wallet public key.
- */
 export async function getJupiterSwapTransaction(opts: {
   quoteResponse: unknown
   userPublicKey: string
@@ -54,13 +40,14 @@ export async function getJupiterSwapTransaction(opts: {
   })
 
   if (!res.ok) {
-    throw new Error(`Jupiter swap failed: ${res.status}`)
+    const body = await res.text().catch(() => '')
+    throw new Error(`Jupiter swap failed (${res.status})${body ? `: ${body.slice(0, 180)}` : ''}`)
   }
 
   return res.json()
 }
 
-/** Convert SOL to lamports */
 export function solToLamports(sol: number): number {
+  if (!Number.isFinite(sol) || sol <= 0) return 0
   return Math.floor(sol * 1_000_000_000)
 }

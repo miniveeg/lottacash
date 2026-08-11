@@ -1,26 +1,40 @@
 import type { CopyConfig, TradeSignal, WalletStats, Timeframe } from './types'
 
-const BASE = import.meta.env.VITE_API_URL || '/api'
+const BASE = (import.meta.env.VITE_API_URL as string | undefined) || '/api'
 
 async function req<T>(path: string, init?: RequestInit): Promise<T> {
+  const headers: Record<string, string> = {
+    ...(init?.headers as Record<string, string> | undefined),
+  }
+  if (init?.body && !headers['Content-Type']) {
+    headers['Content-Type'] = 'application/json'
+  }
+
   const res = await fetch(`${BASE}${path}`, {
     ...init,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(init?.headers || {}),
-    },
+    headers,
   })
+
   if (!res.ok) {
-    const text = await res.text().catch(() => '')
-    throw new Error(text || `API ${res.status}`)
+    let message = `API ${res.status}`
+    try {
+      const data = await res.json()
+      if (data?.error) message = String(data.error)
+    } catch {
+      const text = await res.text().catch(() => '')
+      if (text) message = text.slice(0, 200)
+    }
+    throw new Error(message)
   }
+
+  if (res.status === 204) return undefined as T
   return res.json() as Promise<T>
 }
 
 export async function apiHealth(): Promise<boolean> {
   try {
-    await req<{ ok: boolean }>('/health')
-    return true
+    const data = await req<{ ok: boolean }>('/health')
+    return !!data?.ok
   } catch {
     return false
   }
@@ -64,7 +78,7 @@ export async function patchSignal(
   id: string,
   patch: Partial<Pick<TradeSignal, 'status' | 'txSignature' | 'error'>>
 ) {
-  return req<{ signal: TradeSignal }>(`/signals/${id}`, {
+  return req<{ signal: TradeSignal }>(`/signals/${encodeURIComponent(id)}`, {
     method: 'PATCH',
     body: JSON.stringify(patch),
   })
