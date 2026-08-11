@@ -10,6 +10,7 @@ import { ActiveCopies } from './pages/ActiveCopies'
 import { Activity } from './pages/Activity'
 import { Settings } from './pages/Settings'
 import { Tools } from './pages/Tools'
+import { Help } from './pages/Help'
 
 export default function App() {
   return (
@@ -26,14 +27,14 @@ export default function App() {
             <Route path="/activity" element={<Activity />} />
             <Route path="/copy/:address" element={<CopySetup />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/help" element={<Help />} />
           </Routes>
         </main>
         <MobileNav />
         <footer className="footer">
-          <p>Non-custodial by design. Your keys, your funds.</p>
+          <p>Non-custodial. Your keys, your funds.</p>
           <p className="disclaimer">
-            Copy trading involves significant risk of loss. Past performance is not indicative of
-            future results. You always sign every trade.
+            Copy trading can lose money. You approve every trade. This is not financial advice.
           </p>
         </footer>
       </div>

@@ -7,6 +7,7 @@ import { getSolBalance } from '../lib/solanaTools'
 import { apiHealth } from '../lib/api'
 import { StatCard } from '../components/StatCard'
 import { shortAddress } from '../lib/format'
+import { Steps } from '../components/Steps'
 
 export function Dashboard() {
   const { publicKey, connected } = useWallet()
@@ -33,40 +34,56 @@ export function Dashboard() {
         <h1>Dashboard</h1>
         <p>
           {connected && publicKey
-            ? `Signed in as ${shortAddress(publicKey.toBase58(), 4)}`
-            : 'Connect a wallet to see live balances and copy status.'}
+            ? `Connected as ${shortAddress(publicKey.toBase58(), 4)}`
+            : 'Connect a wallet (top right) to see your balance and manage copies.'}
         </p>
       </div>
 
+      {!connected && (
+        <div className="banner-info">
+          New here? Connect your wallet, then open the{' '}
+          <Link to="/leaderboard">Leaderboard</Link> and tap <strong>Copy</strong> on a wallet.
+          Full walkthrough in <Link to="/help">Help</Link>.
+        </div>
+      )}
+
       <div className="stat-grid">
         <StatCard
-          label="Wallet SOL"
+          label="Your SOL"
           value={bal === null ? '—' : bal.toFixed(3)}
-          sub={connected ? 'On-chain balance' : 'Connect wallet'}
+          sub={connected ? 'Wallet balance' : 'Connect to load'}
         />
-        <StatCard label="Active copies" value={String(enabled)} sub={`${configs.length} total saved`} />
-        <StatCard label="Pending signals" value={String(pending)} sub="Need your signature" />
-        <StatCard label="API" value={apiOk ? 'Online' : 'Offline'} sub="Backend status" />
+        <StatCard
+          label="Copying"
+          value={String(enabled)}
+          sub={enabled === 1 ? '1 wallet on' : `${configs.length} saved total`}
+        />
+        <StatCard
+          label="Waiting on you"
+          value={String(pending)}
+          sub="Signals to sign or skip"
+        />
+        <StatCard label="Server" value={apiOk ? 'Online' : 'Offline'} sub="Backend API" />
       </div>
 
       <div className="dash-actions">
         <Link to="/leaderboard" className="btn primary">
-          Browse leaderboard
-        </Link>
-        <Link to="/tools" className="btn ghost">
-          Open tools
+          Find wallets
         </Link>
         <Link to="/activity" className="btn ghost">
-          Activity
+          Activity {pending > 0 ? `(${pending})` : ''}
         </Link>
-        <Link to="/copies" className="btn ghost">
-          My copies
+        <Link to="/tools" className="btn ghost">
+          Tools
+        </Link>
+        <Link to="/help" className="btn ghost">
+          Help
         </Link>
       </div>
 
-      {enabled > 0 && (
+      {enabled > 0 ? (
         <section className="dash-section">
-          <h2>Enabled targets</h2>
+          <h2>You’re copying</h2>
           <div className="chip-row">
             {configs
               .filter((c) => c.enabled)
@@ -74,23 +91,25 @@ export function Dashboard() {
                 <Link key={c.targetAddress} to={`/copy/${c.targetAddress}`} className="chip">
                   {shortAddress(c.targetAddress, 4)}
                   <span className="chip-meta">
-                    {c.sizeMode === 'fixed' ? `${c.fixedSol} SOL` : '1:1'}
+                    {c.sizeMode === 'fixed' ? `${c.fixedSol} SOL` : 'match size'}
                   </span>
                 </Link>
               ))}
           </div>
         </section>
+      ) : (
+        <section className="panel guide-panel">
+          <h2>Get set up in 4 steps</h2>
+          <Steps
+            items={[
+              'Connect Phantom or Solflare.',
+              'Open Leaderboard and choose a wallet.',
+              'Set a small fixed SOL size + max cap, then save.',
+              'Check Activity for signals (or generate a demo).',
+            ]}
+          />
+        </section>
       )}
-
-      <section className="dash-section how-compact">
-        <h2>Flow</h2>
-        <ol>
-          <li>Pick wallets on the leaderboard or paste an address in Tools.</li>
-          <li>Set fixed or proportional size + max cap.</li>
-          <li>When they trade, a signal appears in Activity.</li>
-          <li>You sign the Jupiter swap — funds never leave your control without approval.</li>
-        </ol>
-      </section>
     </div>
   )
 }

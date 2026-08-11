@@ -15,7 +15,7 @@ export function Topbar() {
           <NavLink to="/tools">Tools</NavLink>
           <NavLink to="/copies">Copies</NavLink>
           <NavLink to="/activity">Activity</NavLink>
-          <NavLink to="/settings">Settings</NavLink>
+          <NavLink to="/help">Help</NavLink>
         </nav>
 
         <div className="wallet-btn">

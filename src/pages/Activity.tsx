@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useWallet } from '@solana/wallet-adapter-react'
 import { listCopyConfigs } from '../lib/copyStore'
 import {
@@ -15,6 +16,7 @@ import {
 } from '../lib/api'
 import { executeDemoSwap } from '../lib/executeSwap'
 import { shortAddress } from '../lib/format'
+import { HelpTip } from '../components/HelpTip'
 
 export function Activity() {
   const wallet = useWallet()
@@ -33,10 +35,7 @@ export function Activity() {
       setApiOnline(ok)
       if (!ok) return
       const { signals: remote } = await fetchSignals(wallet.publicKey.toBase58())
-      if (remote.length) {
-        // Show remote signals (server is source of truth when online)
-        setSignals(remote)
-      }
+      if (remote.length) setSignals(remote)
     } catch {
       setApiOnline(false)
     }
@@ -51,7 +50,7 @@ export function Activity() {
   async function handleDemoSignal() {
     const configs = listCopyConfigs().filter((c) => c.enabled)
     if (configs.length === 0) {
-      setMsg('Enable at least one copy configuration first (My Copies).')
+      setMsg('Turn on at least one copy first (Leaderboard → Copy → save with “on”).')
       return
     }
     const cfg = configs[0]
@@ -59,22 +58,22 @@ export function Activity() {
     if (wallet.publicKey && (await apiHealth())) {
       try {
         await createDemoSignalApi(wallet.publicKey.toBase58(), cfg.targetAddress)
-        setMsg('Demo signal created on server for ' + shortAddress(cfg.targetAddress))
+        setMsg('Demo signal created. Scroll down and try Sign swap (uses a tiny amount).')
         await refresh()
         return
       } catch (e) {
-        setMsg(e instanceof Error ? e.message : 'Server demo failed; using local')
+        setMsg(e instanceof Error ? e.message : 'Server demo failed; trying local')
       }
     }
 
     createDemoSignal(cfg, 'buy')
-    setMsg('Demo buy signal created locally for ' + shortAddress(cfg.targetAddress))
+    setMsg('Demo signal created on this device.')
     refresh()
   }
 
   async function handleSign(signal: TradeSignal) {
     if (!wallet.connected || !wallet.publicKey) {
-      setMsg('Connect your wallet first.')
+      setMsg('Connect your wallet first (top right).')
       return
     }
 
@@ -103,7 +102,7 @@ export function Activity() {
           /* ignore */
         }
       }
-      setMsg(`Signed & sent: ${sig}`)
+      setMsg(`Done. Transaction: ${sig.slice(0, 12)}…`)
     } catch (e) {
       const err = e instanceof Error ? e.message : String(e)
       updateSignalStatus(signal.id, 'failed', { error: err })
@@ -114,7 +113,7 @@ export function Activity() {
           /* ignore */
         }
       }
-      setMsg(`Failed: ${err}`)
+      setMsg(`Could not complete swap: ${err}`)
     } finally {
       setBusyId(null)
       refresh()
@@ -133,20 +132,43 @@ export function Activity() {
     refresh()
   }
 
+  const enabledCount = listCopyConfigs().filter((c) => c.enabled).length
+
   return (
     <div className="page activity">
       <div className="page-header">
         <h1>Activity</h1>
         <p>
-          Trade signals for your account.{' '}
-          {apiOnline ? 'Connected to API (polls every 8s).' : 'API offline — local signals only.'}
+          Trade alerts for wallets you follow. Review each one, then sign in your wallet or skip it.
         </p>
       </div>
+
+      <HelpTip title="What should I do here?">
+        <p>
+          When a copied wallet trades, a card appears below. <strong>Sign swap</strong> opens your
+          wallet to approve a Jupiter exchange sized by your rules. <strong>Dismiss</strong> ignores
+          that alert.
+        </p>
+        <p>
+          Live monitoring is still being connected. Use <strong>Generate demo signal</strong> to
+          practice the sign flow safely with a very small size.
+        </p>
+      </HelpTip>
+
+      {enabledCount === 0 && (
+        <div className="banner-info">
+          You’re not copying anyone yet.{' '}
+          <Link to="/leaderboard">Pick a wallet on the leaderboard</Link> to get started.
+        </div>
+      )}
 
       <div className="activity-toolbar">
         <button className="btn primary" onClick={handleDemoSignal}>
           Generate demo signal
         </button>
+        <span className="toolbar-hint">
+          {apiOnline ? 'API connected' : 'API offline — local only'}
+        </span>
       </div>
 
       {msg && <div className="notice">{msg}</div>}
@@ -154,7 +176,12 @@ export function Activity() {
       {signals.length === 0 ? (
         <div className="empty">
           <p>No signals yet.</p>
-          <p className="hint">Enable a copy, then generate a demo signal to test signing.</p>
+          <p className="hint">
+            Enable a copy, then press <strong>Generate demo signal</strong> to test.
+          </p>
+          <Link to="/leaderboard" className="btn ghost">
+            Browse leaderboard
+          </Link>
         </div>
       ) : (
         <div className="signals-list">
@@ -164,10 +191,11 @@ export function Activity() {
                 <div className="signal-title">
                   <span className={`side ${s.side}`}>{s.side.toUpperCase()}</span>
                   <span className="mono">{shortAddress(s.targetAddress, 4)}</span>
-                  <span className="muted">{s.tokenSymbol || shortAddress(s.tokenMint, 4)}</span>
+                  <span className="muted">{s.tokenSymbol || 'token'}</span>
                 </div>
                 <div className="signal-meta">
-                  ~{s.suggestedSol} SOL · {new Date(s.detectedAt).toLocaleString()} · {s.status}
+                  About {s.suggestedSol} SOL · {new Date(s.detectedAt).toLocaleString()} ·{' '}
+                  {s.status}
                 </div>
                 {s.txSignature && (
                   <a

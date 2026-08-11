@@ -5,9 +5,9 @@ export function MobileNav() {
     <nav className="mobile-nav">
       <NavLink to="/dashboard">Home</NavLink>
       <NavLink to="/leaderboard">Board</NavLink>
-      <NavLink to="/tools">Tools</NavLink>
       <NavLink to="/activity">Activity</NavLink>
-      <NavLink to="/copies">Copies</NavLink>
+      <NavLink to="/tools">Tools</NavLink>
+      <NavLink to="/help">Help</NavLink>
     </nav>
   )
 }

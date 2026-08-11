@@ -13,16 +13,13 @@ export function ActiveCopies() {
   const [apiOnline, setApiOnline] = useState(false)
 
   const refresh = useCallback(async () => {
-    const local = listCopyConfigs()
-    setConfigs(local)
-
+    setConfigs(listCopyConfigs())
     if (!publicKey) return
     try {
       const ok = await apiHealth()
       setApiOnline(ok)
       if (!ok) return
       const { configs: remote } = await fetchConfigs(publicKey.toBase58())
-      // Prefer remote when present; also mirror into local
       if (remote.length) {
         for (const c of remote) {
           saveCopyConfig({
@@ -82,24 +79,23 @@ export function ActiveCopies() {
   return (
     <div className="page active-copies">
       <div className="page-header">
-        <h1>My Copies</h1>
+        <h1>My copies</h1>
         <p>
-          Wallets you are configured to mirror.{' '}
-          {apiOnline ? 'Synced with API.' : 'API offline — local only.'}
+          Wallets you follow. Turn one off anytime — you won’t get new signals for it until you turn
+          it back on.
         </p>
       </div>
 
       {!connected && (
-        <div className="notice">
-          <p>Connect your wallet to manage copy configurations.</p>
-        </div>
+        <div className="banner-info">Connect your wallet to sync copies across the API when it’s running.</div>
       )}
 
       {configs.length === 0 ? (
         <div className="empty">
-          <p>No copy configurations yet.</p>
+          <p>You’re not copying anyone yet.</p>
+          <p className="hint">Browse the leaderboard and tap Copy on a wallet you want to follow.</p>
           <Link to="/leaderboard" className="btn primary">
-            Browse leaderboard
+            Open leaderboard
           </Link>
         </div>
       ) : (
@@ -112,10 +108,11 @@ export function ActiveCopies() {
                   <div className="mono">{shortAddress(c.targetAddress, 6)}</div>
                   {meta?.label && <div className="label-tag">{meta.label}</div>}
                   <div className="copy-meta">
-                    {c.sizeMode === 'fixed' ? `${c.fixedSol} SOL fixed` : 'Proportional 1:1'}
-                    {' · '}max {c.maxSol} SOL{' · '}
+                    {c.sizeMode === 'fixed' ? `${c.fixedSol} SOL each trade` : 'Match their size'}
+                    {' · '}max {c.maxSol} SOL
+                    {' · '}
                     {(c.slippageBps / 100).toFixed(1)}% slip
-                    {c.enabled ? ' · ON' : ' · OFF'}
+                    {c.enabled ? ' · On' : ' · Off'}
                   </div>
                 </div>
                 <div className="copy-card-actions">
@@ -140,10 +137,9 @@ export function ActiveCopies() {
         </div>
       )}
 
-      <div className="notice small" style={{ marginTop: '2rem' }}>
-        <strong>Tip:</strong> After enabling a copy, open <Link to="/activity">Activity</Link> and
-        generate a demo signal to test the Jupiter sign flow.
-      </div>
+      <p className="data-source" style={{ marginTop: '1.25rem' }}>
+        {apiOnline ? 'Synced with server when possible.' : 'Saved on this device (API offline).'}
+      </p>
     </div>
   )
 }
