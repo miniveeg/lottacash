@@ -2,78 +2,59 @@
 
 Non-custodial Solana copy trading for **lottacash.us**.
 
-You connect your own wallet. The app never generates or stores private keys.  
-Trades are prepared with Jupiter and **signed by you**.
+## Stack
 
-## What’s built
+- **Frontend**: Vite + React + TypeScript + Solana wallet adapter
+- **Backend**: Express API (`server/`) — configs, signals, webhook, leaderboard
+- **Storage (MVP)**: JSON files on the server (`server/data/`) + localStorage fallback on the client
 
-- Wallet connect (Phantom, Solflare)
-- Leaderboard (Daily / Weekly / All-time) — mock data, ready for real ranking API
-- Copy setup: fixed SOL **or** proportional, max cap, slippage
-- Local persistence of copy configs
-- **My Copies** management (on/off/edit/remove)
-- **Activity** page with demo trade signals
-- **Full Jupiter quote → user sign → send** demo path
-- Monitoring architecture stubs (`src/lib/monitor.ts`)
-- Configurable RPC via `.env`
-- Mobile bottom navigation
-- Settings + risk reminders
+## Run locally (two terminals)
 
-## Quick start
-
-```bash
-git clone https://github.com/miniveeg/lottacash.git
-cd lottacash
-cp .env.example .env   # optional: set your RPC
+### Terminal 1 — API
+```bat
+cd D:\lottacash\lottacash\server
 npm install
 npm run dev
 ```
+API: http://localhost:3001  ·  Health: http://localhost:3001/api/health
 
-Open http://localhost:5173
+### Terminal 2 — Frontend
+```bat
+cd D:\lottacash\lottacash
+npm install
+npm run dev
+```
+App: http://localhost:5173  (proxies `/api` → backend)
 
-### Test the signing flow
+## API routes
 
-1. Connect wallet  
-2. Leaderboard → Copy a wallet → save settings (enabled)  
-3. **Activity** → **Generate demo signal**  
-4. **Sign swap** (uses a small real Jupiter quote path; be careful on mainnet)
+| Method | Path | Purpose |
+|--------|------|--------|
+| GET | `/api/health` | Health check |
+| GET | `/api/leaderboard?timeframe=weekly` | Ranked wallets |
+| GET | `/api/configs?owner=<wallet>` | User copy configs |
+| POST | `/api/configs` | Create/update config |
+| DELETE | `/api/configs?owner=&target=` | Remove config |
+| GET | `/api/signals?owner=<wallet>` | Trade signals |
+| PATCH | `/api/signals/:id` | Update signal status |
+| POST | `/api/signals/demo` | Create demo signal |
+| POST | `/api/webhook/trade` | External monitor webhook |
+| GET | `/api/watched` | Targets currently watched |
 
-Use **devnet** + a private RPC when testing real sends.
+Webhook auth: header `x-webhook-secret: dev-secret-change-me` (change in production).
 
 ## Architecture
 
-```
-User wallet ──connect──▶ App
-                          │
-                 save CopyConfig (local / future backend)
-                          │
-         [future] Monitor target wallets (Helius / gRPC)
-                          │
-                 TradeSignal created
-                          │
-              Jupiter quote + swap tx
-                          │
-                 User signs in wallet
-                          │
-                    Tx on-chain
-```
+1. User connects wallet and saves copy settings → API stores by `ownerWallet`
+2. Monitor (Helius webhook / future worker) posts to `/api/webhook/trade`
+3. Server creates a **pending signal** for each user copying that target
+4. Frontend Activity page loads signals → user signs Jupiter swap
+5. Platform never holds private keys
 
-## Env
+## Still to build
 
-See `.env.example`:
-
-- `VITE_SOLANA_RPC_URL` — private RPC recommended
-- `VITE_SOLANA_NETWORK` — `mainnet-beta` or `devnet`
-
-## Still needed for production
-
-1. Real profitable-wallet ranking pipeline  
-2. Backend (or Supabase) for configs + multi-device sync  
-3. Live wallet monitoring (webhooks / gRPC)  
-4. Signal delivery to the correct user  
-5. Token safety filters, max daily loss, kill switch  
-6. Hosting on lottacash.us (Vercel works well)
-
-## License
-
-Proprietary — LottaCash.
+- Real ranking indexer
+- Live Helius (or similar) subscription worker
+- Postgres instead of JSON files
+- Auth (sign-in with Solana message) for mutating configs
+- Production deploy (Vercel frontend + Railway/Fly server)

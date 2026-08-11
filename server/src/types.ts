@@ -1,20 +1,8 @@
-export type Timeframe = 'daily' | 'weekly' | 'all'
-
 export type SizeMode = 'fixed' | 'proportional'
 
-export interface WalletStats {
-  address: string
-  label?: string
-  pnl: number
-  winRate: number
-  trades: number
-  volume?: number
-  avgHoldMinutes?: number
-}
-
 export interface CopyConfig {
-  id?: string
-  ownerWallet?: string
+  id: string
+  ownerWallet: string
   targetAddress: string
   sizeMode: SizeMode
   fixedSol: number
@@ -26,25 +14,27 @@ export interface CopyConfig {
 }
 
 export type SignalSide = 'buy' | 'sell'
+export type SignalStatus = 'pending' | 'signed' | 'dismissed' | 'failed'
 
 export interface TradeSignal {
   id: string
-  ownerWallet?: string
+  ownerWallet: string
   targetAddress: string
   side: SignalSide
   tokenMint: string
   tokenSymbol?: string
   suggestedSol: number
   detectedAt: number
-  status: 'pending' | 'signed' | 'dismissed' | 'failed'
+  status: SignalStatus
   txSignature?: string
   error?: string
 }
 
-export interface PreparedSwap {
-  inputMint: string
-  outputMint: string
-  amount: number
-  slippageBps: number
-  quote?: unknown
+export interface WalletStats {
+  address: string
+  label?: string
+  pnl: number
+  winRate: number
+  trades: number
+  volume?: number
 }
