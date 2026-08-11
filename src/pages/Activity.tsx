@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useWallet } from '@solana/wallet-adapter-react'
 import { listCopyConfigs } from '../lib/copyStore'
 import {
@@ -7,33 +7,68 @@ import {
   updateSignalStatus,
   type TradeSignal,
 } from '../lib/monitor'
+import {
+  apiHealth,
+  createDemoSignalApi,
+  fetchSignals,
+  patchSignal,
+} from '../lib/api'
 import { executeDemoSwap } from '../lib/executeSwap'
 import { shortAddress } from '../lib/format'
-import { SOL_MINT } from '../lib/jupiter'
 
 export function Activity() {
   const wallet = useWallet()
   const [signals, setSignals] = useState<TradeSignal[]>([])
   const [busyId, setBusyId] = useState<string | null>(null)
   const [msg, setMsg] = useState<string | null>(null)
+  const [apiOnline, setApiOnline] = useState(false)
 
-  function refresh() {
-    setSignals(listSignals())
-  }
+  const refresh = useCallback(async () => {
+    const local = listSignals()
+    setSignals(local)
+
+    if (!wallet.publicKey) return
+    try {
+      const ok = await apiHealth()
+      setApiOnline(ok)
+      if (!ok) return
+      const { signals: remote } = await fetchSignals(wallet.publicKey.toBase58())
+      if (remote.length) {
+        // Show remote signals (server is source of truth when online)
+        setSignals(remote)
+      }
+    } catch {
+      setApiOnline(false)
+    }
+  }, [wallet.publicKey])
 
   useEffect(() => {
     refresh()
-  }, [])
+    const t = setInterval(refresh, 8000)
+    return () => clearInterval(t)
+  }, [refresh])
 
-  function handleDemoSignal() {
+  async function handleDemoSignal() {
     const configs = listCopyConfigs().filter((c) => c.enabled)
     if (configs.length === 0) {
       setMsg('Enable at least one copy configuration first (My Copies).')
       return
     }
     const cfg = configs[0]
+
+    if (wallet.publicKey && (await apiHealth())) {
+      try {
+        await createDemoSignalApi(wallet.publicKey.toBase58(), cfg.targetAddress)
+        setMsg('Demo signal created on server for ' + shortAddress(cfg.targetAddress))
+        await refresh()
+        return
+      } catch (e) {
+        setMsg(e instanceof Error ? e.message : 'Server demo failed; using local')
+      }
+    }
+
     createDemoSignal(cfg, 'buy')
-    setMsg('Demo buy signal created for ' + shortAddress(cfg.targetAddress))
+    setMsg('Demo buy signal created locally for ' + shortAddress(cfg.targetAddress))
     refresh()
   }
 
@@ -50,41 +85,35 @@ export function Activity() {
     setMsg(null)
 
     try {
-      // Demo uses a well-known liquid pair path. Real flow uses the exact mint from the target trade.
-      // Using SOL mint on both sides is invalid — for a safe demo we only quote SOL -> USDC-like path
-      // if available; otherwise we surface a clear message.
-      //
-      // Simplest safe demo: buy a tiny amount of a known mint is risky on mainnet.
-      // So we demonstrate the signing path with a quote that may fail on purpose if mint is SOL.
-      // Prefer: user tests on devnet, or we only build the quote and show the result.
+      const USDC = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'
+      const mint = signal.tokenMint || USDC
+      const sig = await executeDemoSwap({
+        wallet,
+        side: signal.side,
+        tokenMint: mint === 'So11111111111111111111111111111111111111112' ? USDC : mint,
+        solAmount: Math.min(signal.suggestedSol, 0.05),
+        slippageBps,
+      })
 
-      if (signal.tokenMint === SOL_MINT) {
-        // Safer demo: only fetch a quote for SOL -> USDC (mainnet) so user sees real Jupiter response
-        // without forcing a random memecoin buy.
-        const USDC = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'
-        const sig = await executeDemoSwap({
-          wallet,
-          side: 'buy',
-          tokenMint: USDC,
-          solAmount: Math.min(signal.suggestedSol, 0.05), // hard safety cap for demo
-          slippageBps,
-        })
-        updateSignalStatus(signal.id, 'signed', { txSignature: sig })
-        setMsg(`Signed & sent: ${sig}`)
-      } else {
-        const sig = await executeDemoSwap({
-          wallet,
-          side: signal.side,
-          tokenMint: signal.tokenMint,
-          solAmount: signal.suggestedSol,
-          slippageBps,
-        })
-        updateSignalStatus(signal.id, 'signed', { txSignature: sig })
-        setMsg(`Signed & sent: ${sig}`)
+      updateSignalStatus(signal.id, 'signed', { txSignature: sig })
+      if (apiOnline) {
+        try {
+          await patchSignal(signal.id, { status: 'signed', txSignature: sig })
+        } catch {
+          /* ignore */
+        }
       }
+      setMsg(`Signed & sent: ${sig}`)
     } catch (e) {
       const err = e instanceof Error ? e.message : String(e)
       updateSignalStatus(signal.id, 'failed', { error: err })
+      if (apiOnline) {
+        try {
+          await patchSignal(signal.id, { status: 'failed', error: err })
+        } catch {
+          /* ignore */
+        }
+      }
       setMsg(`Failed: ${err}`)
     } finally {
       setBusyId(null)
@@ -92,8 +121,15 @@ export function Activity() {
     }
   }
 
-  function dismiss(id: string) {
+  async function dismiss(id: string) {
     updateSignalStatus(id, 'dismissed')
+    if (apiOnline) {
+      try {
+        await patchSignal(id, { status: 'dismissed' })
+      } catch {
+        /* ignore */
+      }
+    }
     refresh()
   }
 
@@ -102,8 +138,8 @@ export function Activity() {
       <div className="page-header">
         <h1>Activity</h1>
         <p>
-          Trade signals appear here when a copied wallet acts. For now you can generate a demo
-          signal and test the full Jupiter quote → sign → send flow.
+          Trade signals for your account.{' '}
+          {apiOnline ? 'Connected to API (polls every 8s).' : 'API offline — local signals only.'}
         </p>
       </div>
 
@@ -165,12 +201,6 @@ export function Activity() {
           ))}
         </div>
       )}
-
-      <div className="notice small" style={{ marginTop: '2rem' }}>
-        <strong>Production path:</strong> A backend watches enabled target wallets, detects real
-        swaps, sizes according to each user config, builds a Jupiter transaction, and pushes a
-        signal here. You only sign. The demo button proves the signing path works end-to-end.
-      </div>
     </div>
   )
 }

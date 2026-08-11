@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useWallet } from '@solana/wallet-adapter-react'
 import { getWalletByAddress } from '../lib/mockData'
 import { getCopyConfig, saveCopyConfig, removeCopyConfig } from '../lib/copyStore'
+import { saveConfigApi, deleteConfigApi, apiHealth } from '../lib/api'
 import type { SizeMode } from '../lib/types'
 import { shortAddress } from '../lib/format'
 
@@ -19,6 +20,8 @@ export function CopySetup() {
   const [enabled, setEnabled] = useState(true)
   const [saved, setSaved] = useState(false)
   const [existing, setExisting] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!address) return
@@ -33,24 +36,53 @@ export function CopySetup() {
     }
   }, [address])
 
-  function handleSave() {
-    if (!address) return
-    saveCopyConfig({
+  async function handleSave() {
+    if (!address || !publicKey) return
+    setBusy(true)
+    setError(null)
+    const payload = {
       targetAddress: address,
       sizeMode,
       fixedSol: Number(fixedSol) || 0.1,
       maxSol: Number(maxSol) || 1,
       slippageBps: Math.round((Number(slippage) || 1) * 100),
       enabled,
-    })
+    }
+
+    // Always save locally
+    saveCopyConfig(payload)
+
+    // Also push to API when available
+    try {
+      const ok = await apiHealth()
+      if (ok) {
+        await saveConfigApi({
+          ...payload,
+          ownerWallet: publicKey.toBase58(),
+        })
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'API save failed (local save kept)')
+    }
+
     setSaved(true)
     setExisting(true)
+    setBusy(false)
     setTimeout(() => setSaved(false), 2000)
   }
 
-  function handleRemove() {
+  async function handleRemove() {
     if (!address) return
     removeCopyConfig(address)
+    if (publicKey) {
+      try {
+        if (await apiHealth()) {
+          await deleteConfigApi(publicKey.toBase58(), address)
+        }
+      } catch {
+        /* local already removed */
+      }
+    }
     navigate('/copies')
   }
 
@@ -146,14 +178,16 @@ export function CopySetup() {
           </div>
 
           <div className="notice small">
-            <strong>How it works:</strong> When this wallet buys or sells, we prepare a Jupiter swap
-            sized to your rules. You will be prompted to sign in your wallet. We never move funds
-            without your signature.
+            <strong>How it works:</strong> Settings save locally and to the API when the backend is
+            running. When this wallet trades, a signal is created for you to sign a Jupiter swap. We
+            never move funds without your signature.
           </div>
 
+          {error && <div className="error-text">{error}</div>}
+
           <div className="form-actions">
-            <button className="btn primary" onClick={handleSave}>
-              {saved ? 'Saved ✓' : existing ? 'Update settings' : 'Start copying'}
+            <button className="btn primary" onClick={handleSave} disabled={busy}>
+              {busy ? 'Saving…' : saved ? 'Saved ✓' : existing ? 'Update settings' : 'Start copying'}
             </button>
             {existing && (
               <button className="btn danger" onClick={handleRemove}>

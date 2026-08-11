@@ -1,30 +1,81 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useWallet } from '@solana/wallet-adapter-react'
-import { listCopyConfigs, setCopyEnabled, removeCopyConfig } from '../lib/copyStore'
+import { listCopyConfigs, setCopyEnabled, removeCopyConfig, saveCopyConfig } from '../lib/copyStore'
+import { fetchConfigs, saveConfigApi, deleteConfigApi, apiHealth } from '../lib/api'
 import type { CopyConfig } from '../lib/types'
 import { getWalletByAddress } from '../lib/mockData'
 import { shortAddress } from '../lib/format'
 
 export function ActiveCopies() {
-  const { connected } = useWallet()
+  const { connected, publicKey } = useWallet()
   const [configs, setConfigs] = useState<CopyConfig[]>([])
+  const [apiOnline, setApiOnline] = useState(false)
 
-  function refresh() {
-    setConfigs(listCopyConfigs())
-  }
+  const refresh = useCallback(async () => {
+    const local = listCopyConfigs()
+    setConfigs(local)
+
+    if (!publicKey) return
+    try {
+      const ok = await apiHealth()
+      setApiOnline(ok)
+      if (!ok) return
+      const { configs: remote } = await fetchConfigs(publicKey.toBase58())
+      // Prefer remote when present; also mirror into local
+      if (remote.length) {
+        for (const c of remote) {
+          saveCopyConfig({
+            targetAddress: c.targetAddress,
+            sizeMode: c.sizeMode,
+            fixedSol: c.fixedSol,
+            maxSol: c.maxSol,
+            slippageBps: c.slippageBps,
+            enabled: c.enabled,
+            createdAt: c.createdAt,
+          })
+        }
+        setConfigs(listCopyConfigs())
+      }
+    } catch {
+      setApiOnline(false)
+    }
+  }, [publicKey])
 
   useEffect(() => {
     refresh()
-  }, [])
+  }, [refresh])
 
-  function toggle(address: string, enabled: boolean) {
+  async function toggle(address: string, enabled: boolean) {
     setCopyEnabled(address, enabled)
+    const cfg = listCopyConfigs().find((c) => c.targetAddress === address)
+    if (cfg && publicKey && apiOnline) {
+      try {
+        await saveConfigApi({
+          ownerWallet: publicKey.toBase58(),
+          targetAddress: cfg.targetAddress,
+          sizeMode: cfg.sizeMode,
+          fixedSol: cfg.fixedSol,
+          maxSol: cfg.maxSol,
+          slippageBps: cfg.slippageBps,
+          enabled,
+        })
+      } catch {
+        /* keep local */
+      }
+    }
     refresh()
   }
 
-  function remove(address: string) {
+  async function remove(address: string) {
     removeCopyConfig(address)
+    if (publicKey && apiOnline) {
+      try {
+        await deleteConfigApi(publicKey.toBase58(), address)
+      } catch {
+        /* keep local delete */
+      }
+    }
     refresh()
   }
 
@@ -33,7 +84,8 @@ export function ActiveCopies() {
       <div className="page-header">
         <h1>My Copies</h1>
         <p>
-          Wallets you are configured to mirror. Settings are stored locally in this browser for now.
+          Wallets you are configured to mirror.{' '}
+          {apiOnline ? 'Synced with API.' : 'API offline — local only.'}
         </p>
       </div>
 
