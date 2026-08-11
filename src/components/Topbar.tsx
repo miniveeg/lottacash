@@ -10,11 +10,10 @@ export function Topbar() {
         </Link>
 
         <nav className="nav desktop-nav">
-          <NavLink to="/" end>
-            Home
-          </NavLink>
+          <NavLink to="/dashboard">Dashboard</NavLink>
           <NavLink to="/leaderboard">Leaderboard</NavLink>
-          <NavLink to="/copies">My Copies</NavLink>
+          <NavLink to="/tools">Tools</NavLink>
+          <NavLink to="/copies">Copies</NavLink>
           <NavLink to="/activity">Activity</NavLink>
           <NavLink to="/settings">Settings</NavLink>
         </nav>

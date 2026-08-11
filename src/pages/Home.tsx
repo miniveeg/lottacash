@@ -4,44 +4,46 @@ export function Home() {
   return (
     <div className="page home">
       <section className="hero">
+        <div className="hero-badge">Non-custodial · Solana</div>
         <h1>Copy the best Solana wallets</h1>
         <p className="lead">
-          Non-custodial copy trading. Connect your wallet, pick top performers, set your size, and
-          mirror their trades — you always sign.
+          Connect your wallet, pick top performers, set your size, and mirror trades — you always
+          sign. No platform keys. No deposits into a black box.
         </p>
         <div className="hero-actions">
-          <Link to="/leaderboard" className="btn primary">
-            View Leaderboard
+          <Link to="/dashboard" className="btn primary">
+            Dashboard
           </Link>
-          <Link to="/copies" className="btn ghost">
-            My Copies
+          <Link to="/leaderboard" className="btn ghost">
+            Leaderboard
+          </Link>
+          <Link to="/tools" className="btn ghost">
+            Tools
           </Link>
         </div>
       </section>
 
       <section className="features">
         <div className="feature">
+          <div className="feature-icon">🔑</div>
           <h3>Your keys stay with you</h3>
-          <p>We never generate or store private keys. You connect your existing wallet.</p>
+          <p>Connect Phantom or Solflare. We never generate or store private keys.</p>
         </div>
         <div className="feature">
+          <div className="feature-icon">📐</div>
           <h3>Flexible sizing</h3>
-          <p>Fixed SOL per trade or proportional 1:1 copy with an optional max cap.</p>
+          <p>Fixed SOL per trade or proportional 1:1 with a hard max safety cap.</p>
         </div>
         <div className="feature">
+          <div className="feature-icon">✍️</div>
           <h3>You approve every trade</h3>
-          <p>We prepare the Jupiter swap. You sign it. Full control at all times.</p>
+          <p>Jupiter routes are prepared for you. Nothing broadcasts without your signature.</p>
         </div>
-      </section>
-
-      <section className="how">
-        <h2>How it works</h2>
-        <ol>
-          <li>Connect Phantom, Solflare, or another Solana wallet.</li>
-          <li>Pick wallets from the leaderboard (daily / weekly / all-time).</li>
-          <li>Set fixed size or proportional copy + max safety limit.</li>
-          <li>When they trade, we build a Jupiter swap and ask you to sign.</li>
-        </ol>
+        <div className="feature">
+          <div className="feature-icon">🛠️</div>
+          <h3>Built-in tools</h3>
+          <p>Wallet lookup, size calculator, balance checks, and explorer shortcuts.</p>
+        </div>
       </section>
     </div>
   )
