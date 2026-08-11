@@ -5,6 +5,7 @@ import { BrowserRouter } from 'react-router-dom'
 import App from './App'
 import { WalletContextProvider } from './contexts/WalletContext'
 import './styles/global.css'
+import './styles/responsive-extra.css'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
