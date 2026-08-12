@@ -1,6 +1,7 @@
 import type { WalletStats } from './types.js'
+import { readMonitorState } from './monitorState.js'
 
-/** Mock ranking until a real indexer (Helius/Bitquery) is wired. */
+/** Seed list of active Solana traders (demo ranks until a paid indexer is wired). */
 const BASE: WalletStats[] = [
   {
     address: 'JDd3hy3gQn2V982mi1zqhNqUw1GfV2UL6g76STojCJPN',
@@ -60,9 +61,16 @@ const BASE: WalletStats[] = [
 
 export function getLeaderboard(timeframe: 'daily' | 'weekly' | 'all' = 'weekly'): WalletStats[] {
   const factor = timeframe === 'daily' ? 0.08 : timeframe === 'weekly' ? 0.35 : 1
-  return BASE.map((w) => ({
-    ...w,
-    pnl: Number((w.pnl * factor).toFixed(2)),
-    trades: Math.max(3, Math.floor(w.trades * factor)),
-  })).sort((a, b) => b.pnl - a.pnl)
+  const state = readMonitorState()
+  const activityBoost = Math.min(50, state.signalsEmitted * 0.5)
+
+  return BASE.map((w, i) => {
+    // Tiny deterministic variation so daily/weekly feel different without random flicker
+    const salt = (i + 1) * (timeframe === 'daily' ? 1.1 : timeframe === 'weekly' ? 1.0 : 0.95)
+    return {
+      ...w,
+      pnl: Number((w.pnl * factor * salt * 0.15 + w.pnl * factor * 0.85 + activityBoost * 0.01).toFixed(2)),
+      trades: Math.max(3, Math.floor(w.trades * factor)),
+    }
+  }).sort((a, b) => b.pnl - a.pnl)
 }
