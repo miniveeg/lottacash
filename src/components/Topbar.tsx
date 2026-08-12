@@ -1,7 +1,10 @@
 import { Link, NavLink } from 'react-router-dom'
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui'
+import { listSignals } from '../lib/monitor'
 
 export function Topbar() {
+  const pending = listSignals().filter((s) => s.status === 'pending').length
+
   return (
     <header className="topbar">
       <div className="topbar-inner">
@@ -14,7 +17,10 @@ export function Topbar() {
           <NavLink to="/leaderboard">Leaderboard</NavLink>
           <NavLink to="/tools">Tools</NavLink>
           <NavLink to="/copies">Copies</NavLink>
-          <NavLink to="/activity">Activity</NavLink>
+          <NavLink to="/activity" className="nav-with-badge">
+            Activity
+            {pending > 0 && <span className="nav-badge">{pending > 9 ? '9+' : pending}</span>}
+          </NavLink>
           <NavLink to="/help">Help</NavLink>
         </nav>
 
