@@ -14,7 +14,7 @@ import { useAppTick } from '../hooks/useAppTick'
 
 export function Dashboard() {
   const { publicKey, connected } = useWallet()
-  useAppTick()
+  const tick = useAppTick()
   const [bal, setBal] = useState<number | null>(null)
   const [balLoading, setBalLoading] = useState(false)
   const [apiOk, setApiOk] = useState<boolean | null>(null)
@@ -22,13 +22,15 @@ export function Dashboard() {
   const [pending, setPending] = useState(0)
 
   const refreshLocal = useCallback(() => {
-    const all = listCopyConfigs()
-    setConfigs(all)
+    setConfigs(listCopyConfigs())
     setPending(listSignals().filter((s) => s.status === 'pending').length)
   }, [])
 
   useEffect(() => {
     refreshLocal()
+  }, [refreshLocal, tick])
+
+  useEffect(() => {
     apiHealth().then(setApiOk)
 
     const onFocus = () => {
@@ -38,11 +40,6 @@ export function Dashboard() {
     window.addEventListener('focus', onFocus)
     return () => window.removeEventListener('focus', onFocus)
   }, [refreshLocal])
-
-  // Re-read local stores when app events fire
-  useEffect(() => {
-    refreshLocal()
-  })
 
   useEffect(() => {
     if (!publicKey) {
