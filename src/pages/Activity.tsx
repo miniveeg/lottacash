@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useWallet } from '@solana/wallet-adapter-react'
 import { listCopyConfigs } from '../lib/copyStore'
@@ -20,11 +20,14 @@ import { HelpTip } from '../components/HelpTip'
 import { useAppTick } from '../hooks/useAppTick'
 import { useToast } from '../components/Toast'
 
+type Filter = 'all' | 'pending' | 'signed' | 'failed' | 'dismissed'
+
 export function Activity() {
   const wallet = useWallet()
   useAppTick()
   const { push } = useToast()
   const [signals, setSignals] = useState<TradeSignal[]>([])
+  const [filter, setFilter] = useState<Filter>('all')
   const [busyId, setBusyId] = useState<string | null>(null)
   const [msg, setMsg] = useState<string | null>(null)
   const [apiOnline, setApiOnline] = useState(false)
@@ -39,7 +42,6 @@ export function Activity() {
       if (!ok) return
       const { signals: remote } = await fetchSignals(wallet.publicKey.toBase58())
       if (remote.length) {
-        // Prefer remote when API has data; keep local-only demos merged by id
         const byId = new Map<string, TradeSignal>()
         for (const s of listSignals()) byId.set(s.id, s)
         for (const s of remote) byId.set(s.id, s)
@@ -55,6 +57,13 @@ export function Activity() {
     const t = setInterval(refresh, 10000)
     return () => clearInterval(t)
   }, [refresh])
+
+  const visible = useMemo(() => {
+    if (filter === 'all') return signals
+    return signals.filter((s) => s.status === filter)
+  }, [signals, filter])
+
+  const pendingCount = signals.filter((s) => s.status === 'pending').length
 
   async function handleDemoSignal() {
     const configs = listCopyConfigs().filter((c) => c.enabled)
@@ -147,7 +156,31 @@ export function Activity() {
     refresh()
   }
 
+  async function dismissAllPending() {
+    const pending = signals.filter((s) => s.status === 'pending')
+    if (pending.length === 0) return
+    for (const s of pending) {
+      updateSignalStatus(s.id, 'dismissed')
+      if (apiOnline) {
+        try {
+          await patchSignal(s.id, { status: 'dismissed' })
+        } catch {
+          /* ignore */
+        }
+      }
+    }
+    push(`Dismissed ${pending.length} signal(s)`, 'info')
+    refresh()
+  }
+
   const enabledCount = listCopyConfigs().filter((c) => c.enabled).length
+  const filters: { id: Filter; label: string }[] = [
+    { id: 'all', label: 'All' },
+    { id: 'pending', label: 'Pending' },
+    { id: 'signed', label: 'Signed' },
+    { id: 'failed', label: 'Failed' },
+    { id: 'dismissed', label: 'Dismissed' },
+  ]
 
   return (
     <div className="page activity">
@@ -181,16 +214,34 @@ export function Activity() {
         <button className="btn primary" onClick={handleDemoSignal}>
           Generate demo signal
         </button>
+        {pendingCount > 0 && (
+          <button className="btn ghost" onClick={dismissAllPending}>
+            Dismiss all pending ({pendingCount})
+          </button>
+        )}
         <span className="toolbar-hint">
           {apiOnline ? 'API connected' : 'API offline — local only'}
         </span>
       </div>
 
+      <div className="filter-chips">
+        {filters.map((f) => (
+          <button
+            key={f.id}
+            type="button"
+            className={`filter-chip ${filter === f.id ? 'active' : ''}`}
+            onClick={() => setFilter(f.id)}
+          >
+            {f.label}
+          </button>
+        ))}
+      </div>
+
       {msg && <div className="notice">{msg}</div>}
 
-      {signals.length === 0 ? (
+      {visible.length === 0 ? (
         <div className="empty">
-          <p>No signals yet.</p>
+          <p>{signals.length === 0 ? 'No signals yet.' : 'No signals in this filter.'}</p>
           <p className="hint">
             Enable a copy, then press <strong>Generate demo signal</strong> to test.
           </p>
@@ -200,7 +251,7 @@ export function Activity() {
         </div>
       ) : (
         <div className="signals-list">
-          {signals.map((s) => (
+          {visible.map((s) => (
             <div key={s.id} className={`signal-card status-${s.status}`}>
               <div className="signal-main">
                 <div className="signal-title">
