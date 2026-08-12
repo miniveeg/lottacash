@@ -31,13 +31,41 @@ async function req<T>(path: string, init?: RequestInit): Promise<T> {
   return res.json() as Promise<T>
 }
 
+export interface HealthInfo {
+  ok: boolean
+  version?: string
+  helius?: boolean
+  monitor?: {
+    enabled: boolean
+    helius: boolean
+    intervalMs: number
+    watched: number
+    lastRunAt: number
+    cycles: number
+    signalsEmitted: number
+    lastError?: string
+  }
+}
+
 export async function apiHealth(): Promise<boolean> {
   try {
-    const data = await req<{ ok: boolean }>('/health')
+    const data = await req<HealthInfo>('/health')
     return !!data?.ok
   } catch {
     return false
   }
+}
+
+export async function fetchHealth(): Promise<HealthInfo | null> {
+  try {
+    return await req<HealthInfo>('/health')
+  } catch {
+    return null
+  }
+}
+
+export async function runMonitorOnce() {
+  return req<{ ok: boolean; status: unknown }>('/monitor/run', { method: 'POST' })
 }
 
 export async function fetchLeaderboard(timeframe: Timeframe) {

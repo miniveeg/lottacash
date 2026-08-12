@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useWallet } from '@solana/wallet-adapter-react'
 import { shortAddress } from '../lib/format'
 import { SOLANA_NETWORK, getRpcEndpoint } from '../lib/connection'
-import { apiHealth } from '../lib/api'
+import { fetchHealth, runMonitorOnce, type HealthInfo } from '../lib/api'
 import { StatusDot } from '../components/StatusDot'
 import { CopyButton } from '../components/CopyButton'
 import { useToast } from '../components/Toast'
@@ -11,21 +11,35 @@ import { clearSignals } from '../lib/monitor'
 
 export function Settings() {
   const { publicKey, connected } = useWallet()
-  const [apiOk, setApiOk] = useState<boolean | null>(null)
+  const [health, setHealth] = useState<HealthInfo | null>(null)
   const [checking, setChecking] = useState(false)
+  const [runningMon, setRunningMon] = useState(false)
   const { push } = useToast()
 
   async function recheck() {
     setChecking(true)
-    setApiOk(null)
-    const ok = await apiHealth()
-    setApiOk(ok)
+    const h = await fetchHealth()
+    setHealth(h)
     setChecking(false)
-    push(ok ? 'API is online' : 'API is offline', ok ? 'success' : 'error')
+    push(h?.ok ? 'API is online' : 'API is offline', h?.ok ? 'success' : 'error')
+  }
+
+  async function forceMonitor() {
+    setRunningMon(true)
+    try {
+      await runMonitorOnce()
+      const h = await fetchHealth()
+      setHealth(h)
+      push('Monitor cycle finished', 'success')
+    } catch (e) {
+      push(e instanceof Error ? e.message : 'Monitor run failed', 'error')
+    } finally {
+      setRunningMon(false)
+    }
   }
 
   useEffect(() => {
-    apiHealth().then(setApiOk)
+    fetchHealth().then(setHealth)
   }, [])
 
   function clearLocalData() {
@@ -38,12 +52,15 @@ export function Settings() {
     push('Local data cleared', 'success')
   }
 
+  const apiOk = health === null ? null : !!health.ok
+  const mon = health?.monitor
+
   return (
     <div className="page settings">
       <div className="page-header row-header">
         <div>
           <h1>Settings</h1>
-          <p>Connection, storage, and safety.</p>
+          <p>Connection, monitor service, and safety.</p>
         </div>
         <StatusDot ok={apiOk} />
       </div>
@@ -66,22 +83,53 @@ export function Settings() {
         <p className="hint mono" style={{ wordBreak: 'break-all' }}>
           RPC: {getRpcEndpoint()}
         </p>
-        <p className="hint">
-          Override with <code>VITE_SOLANA_NETWORK</code> and <code>VITE_SOLANA_RPC_URL</code> in{' '}
-          <code>.env</code>.
-        </p>
       </div>
 
       <div className="settings-card">
         <h3>Backend API</h3>
         <p>
-          {apiOk === null && 'Checking…'}
-          {apiOk === true && 'Online — frontend proxies /api → localhost:3001'}
-          {apiOk === false && 'Offline — run: cd server && npm run dev'}
+          {health === null && 'Checking…'}
+          {health?.ok && (
+            <>
+              Online · v{health.version || '?'} · Helius{' '}
+              {health.helius ? 'configured' : 'not set (public RPC)'}
+            </>
+          )}
+          {health === null ? null : !health.ok && 'Offline — run: cd server && npm run dev'}
         </p>
         <button className="btn small" style={{ marginTop: '0.75rem' }} onClick={recheck} disabled={checking}>
           {checking ? 'Checking…' : 'Recheck connection'}
         </button>
+      </div>
+
+      <div className="settings-card">
+        <h3>Monitor worker</h3>
+        {mon ? (
+          <div className="hint" style={{ lineHeight: 1.6 }}>
+            <div>Enabled: {mon.enabled ? 'yes' : 'no'}</div>
+            <div>Watched wallets: {mon.watched}</div>
+            <div>Cycles: {mon.cycles}</div>
+            <div>Signals emitted: {mon.signalsEmitted}</div>
+            <div>
+              Last run:{' '}
+              {mon.lastRunAt ? new Date(mon.lastRunAt).toLocaleString() : 'never'}
+            </div>
+            {mon.lastError && <div className="error-text">Last error: {mon.lastError}</div>}
+          </div>
+        ) : (
+          <p>Start the API server to see monitor status.</p>
+        )}
+        <button
+          className="btn small"
+          style={{ marginTop: '0.75rem' }}
+          onClick={forceMonitor}
+          disabled={runningMon || !health?.ok}
+        >
+          {runningMon ? 'Running…' : 'Run monitor now'}
+        </button>
+        <p className="hint" style={{ marginTop: '0.65rem' }}>
+          For production reliability, set <code>HELIUS_API_KEY</code> in <code>server/.env</code>.
+        </p>
       </div>
 
       <div className="settings-card">
