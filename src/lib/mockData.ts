@@ -64,12 +64,12 @@ const BASE: WalletStats[] = [
   },
 ]
 
-/** Mock ranking. Replace with real indexer / Helius / Birdeye later. */
+/** Deterministic mock ranking (no random flicker). Replace with real indexer later. */
 export function getLeaderboard(timeframe: Timeframe): WalletStats[] {
   const factor = timeframe === 'daily' ? 0.08 : timeframe === 'weekly' ? 0.35 : 1
   return BASE.map((w) => ({
     ...w,
-    pnl: Number((w.pnl * factor * (0.85 + Math.random() * 0.3)).toFixed(2)),
+    pnl: Number((w.pnl * factor).toFixed(2)),
     trades: Math.max(3, Math.floor(w.trades * factor)),
   })).sort((a, b) => b.pnl - a.pnl)
 }

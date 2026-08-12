@@ -3,6 +3,7 @@ import { Topbar } from './components/Topbar'
 import { MobileNav } from './components/MobileNav'
 import { ToastProvider } from './components/Toast'
 import { ScrollToTop } from './components/ScrollToTop'
+import { ErrorBoundary } from './components/ErrorBoundary'
 import { Home } from './pages/Home'
 import { Dashboard } from './pages/Dashboard'
 import { Leaderboard } from './pages/Leaderboard'
@@ -21,22 +22,27 @@ export default function App() {
       <div className="app">
         <Topbar />
         <main className="main">
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/leaderboard" element={<Leaderboard />} />
-            <Route path="/tools" element={<Tools />} />
-            <Route path="/copies" element={<ActiveCopies />} />
-            <Route path="/activity" element={<Activity />} />
-            <Route path="/copy/:address" element={<CopySetup />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/help" element={<Help />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <ErrorBoundary>
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/leaderboard" element={<Leaderboard />} />
+              <Route path="/tools" element={<Tools />} />
+              <Route path="/copies" element={<ActiveCopies />} />
+              <Route path="/activity" element={<Activity />} />
+              <Route path="/copy/:address" element={<CopySetup />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route path="/help" element={<Help />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </ErrorBoundary>
         </main>
         <MobileNav />
         <footer className="footer">
-          <p>Non-custodial. Your keys, your funds.</p>
+          <p>
+            Non-custodial. Your keys, your funds. ·{' '}
+            <a href="/settings">Settings</a> · <a href="/help">Help</a>
+          </p>
           <p className="disclaimer">
             Copy trading can lose money. You approve every trade. This is not financial advice.
           </p>

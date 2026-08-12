@@ -8,6 +8,8 @@ import type { SizeMode } from '../lib/types'
 import { shortAddress } from '../lib/format'
 import { HelpTip } from '../components/HelpTip'
 import { useToast } from '../components/Toast'
+import { isValidSolanaAddress } from '../lib/solanaTools'
+import { explorerAddress } from '../lib/solanaTools'
 
 export function CopySetup() {
   const { address } = useParams<{ address: string }>()
@@ -26,8 +28,10 @@ export function CopySetup() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  const valid = !!address && isValidSolanaAddress(address)
+
   useEffect(() => {
-    if (!address) return
+    if (!address || !valid) return
     const cfg = getCopyConfig(address)
     if (cfg) {
       setExisting(true)
@@ -37,18 +41,30 @@ export function CopySetup() {
       setSlippage(String(cfg.slippageBps / 100))
       setEnabled(cfg.enabled)
     }
-  }, [address])
+  }, [address, valid])
 
   async function handleSave() {
-    if (!address || !publicKey) return
+    if (!address || !publicKey || !valid) return
+    const fixed = Number(fixedSol)
+    const max = Number(maxSol)
+    const slip = Number(slippage)
+    if (!Number.isFinite(fixed) || fixed <= 0) {
+      setError('Fixed SOL must be greater than 0')
+      return
+    }
+    if (!Number.isFinite(max) || max < fixed) {
+      setError('Max SOL must be at least your fixed amount')
+      return
+    }
+
     setBusy(true)
     setError(null)
     const payload = {
       targetAddress: address,
       sizeMode,
-      fixedSol: Number(fixedSol) || 0.1,
-      maxSol: Number(maxSol) || 1,
-      slippageBps: Math.round((Number(slippage) || 1) * 100),
+      fixedSol: fixed,
+      maxSol: max,
+      slippageBps: Math.round((Number.isFinite(slip) ? slip : 1) * 100),
       enabled,
     }
 
@@ -86,8 +102,17 @@ export function CopySetup() {
     navigate('/copies')
   }
 
-  if (!address) {
-    return <div className="page">Invalid wallet address.</div>
+  if (!address || !valid) {
+    return (
+      <div className="page">
+        <div className="empty">
+          <p>That doesn’t look like a valid Solana address.</p>
+          <Link to="/tools" className="btn primary">
+            Look up a wallet
+          </Link>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -98,7 +123,9 @@ export function CopySetup() {
         </Link>
         <h1>Set up copy</h1>
         <p className="mono">
-          {shortAddress(address, 6)}
+          <a href={explorerAddress(address)} target="_blank" rel="noreferrer">
+            {shortAddress(address, 6)}
+          </a>
           {walletMeta?.label ? ` · ${walletMeta.label}` : ''}
         </p>
       </div>

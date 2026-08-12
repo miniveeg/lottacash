@@ -17,9 +17,22 @@ import type { CopyConfig, TradeSignal } from './types.js'
 const app = express()
 const PORT = Number(process.env.PORT || 3001)
 const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET || 'dev-secret-change-me'
+const VERSION = '0.1.1'
 
 app.use(cors({ origin: true }))
 app.use(express.json({ limit: '1mb' }))
+
+app.use((req, res, next) => {
+  const id = randomUUID().slice(0, 8)
+  res.setHeader('x-request-id', id)
+  const start = Date.now()
+  res.on('finish', () => {
+    if (req.path !== '/api/health') {
+      console.log(`${req.method} ${req.path} ${res.statusCode} ${Date.now() - start}ms [${id}]`)
+    }
+  })
+  next()
+})
 
 function finiteNumber(value: unknown, fallback: number): number {
   const n = Number(value)
@@ -27,7 +40,7 @@ function finiteNumber(value: unknown, fallback: number): number {
 }
 
 app.get('/api/health', (_req, res) => {
-  res.json({ ok: true, service: 'lottacash-server', time: Date.now() })
+  res.json({ ok: true, service: 'lottacash-server', version: VERSION, time: Date.now() })
 })
 
 app.get('/api/leaderboard', (req, res) => {
@@ -48,6 +61,9 @@ app.post('/api/configs', (req, res) => {
   const targetAddress = String(body.targetAddress || '').trim()
   if (!ownerWallet || !targetAddress) {
     return res.status(400).json({ error: 'ownerWallet and targetAddress required' })
+  }
+  if (ownerWallet.length > 64 || targetAddress.length > 64) {
+    return res.status(400).json({ error: 'invalid address length' })
   }
 
   const now = Date.now()
@@ -95,8 +111,8 @@ app.patch('/api/signals/:id', (req, res) => {
   if (body.status && (allowedStatus as readonly string[]).includes(body.status)) {
     patch.status = body.status
   }
-  if (typeof body.txSignature === 'string') patch.txSignature = body.txSignature
-  if (typeof body.error === 'string') patch.error = body.error
+  if (typeof body.txSignature === 'string') patch.txSignature = body.txSignature.slice(0, 128)
+  if (typeof body.error === 'string') patch.error = body.error.slice(0, 500)
 
   const updated = updateSignal(id, patch)
   if (!updated) return res.status(404).json({ error: 'not found' })
@@ -183,5 +199,5 @@ app.use((err: unknown, _req: express.Request, res: express.Response, _next: expr
 })
 
 app.listen(PORT, () => {
-  console.log(`LottaCash API listening on http://localhost:${PORT}`)
+  console.log(`LottaCash API v${VERSION} on http://localhost:${PORT}`)
 })

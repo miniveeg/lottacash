@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useWallet } from '@solana/wallet-adapter-react'
 import { getLeaderboard } from '../lib/mockData'
@@ -7,6 +7,7 @@ import type { Timeframe, WalletStats } from '../lib/types'
 import { shortAddress, formatSol, formatPct } from '../lib/format'
 import { CopyButton } from '../components/CopyButton'
 import { HelpTip } from '../components/HelpTip'
+import { explorerAddress } from '../lib/solanaTools'
 
 const TABS: { id: Timeframe; label: string }[] = [
   { id: 'daily', label: 'Today' },
@@ -22,13 +23,16 @@ export function Leaderboard() {
   const [wallets, setWallets] = useState<WalletStats[]>([])
   const [source, setSource] = useState<'api' | 'mock'>('mock')
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [q, setQ] = useState('')
   const [sort, setSort] = useState<SortKey>('pnl')
   const [minWin, setMinWin] = useState(0)
+  const [reloadKey, setReloadKey] = useState(0)
 
-  useEffect(() => {
+  const load = useCallback(() => {
     let cancelled = false
     setLoading(true)
+    setError(null)
     fetchLeaderboard(timeframe)
       .then((data) => {
         if (cancelled) return
@@ -39,6 +43,7 @@ export function Leaderboard() {
         if (cancelled) return
         setWallets(getLeaderboard(timeframe))
         setSource('mock')
+        setError('API offline — showing demo ranks')
       })
       .finally(() => {
         if (!cancelled) setLoading(false)
@@ -47,6 +52,11 @@ export function Leaderboard() {
       cancelled = true
     }
   }, [timeframe])
+
+  useEffect(() => {
+    const cleanup = load()
+    return cleanup
+  }, [load, reloadKey])
 
   const filtered = useMemo(() => {
     let list = [...wallets]
@@ -65,12 +75,17 @@ export function Leaderboard() {
 
   return (
     <div className="page leaderboard">
-      <div className="page-header">
-        <h1>Leaderboard</h1>
-        <p>
-          Wallets ranked by profit (PnL). Tap <strong>Copy</strong> to follow one with your own size
-          rules.
-        </p>
+      <div className="page-header row-header">
+        <div>
+          <h1>Leaderboard</h1>
+          <p>
+            Wallets ranked by profit (PnL). Tap <strong>Copy</strong> to follow one with your own
+            size rules.
+          </p>
+        </div>
+        <button className="btn small" onClick={() => setReloadKey((k) => k + 1)} disabled={loading}>
+          {loading ? 'Loading…' : 'Refresh'}
+        </button>
       </div>
 
       {!connected && (
@@ -80,11 +95,13 @@ export function Leaderboard() {
         </div>
       )}
 
+      {error && <div className="banner-warn">{error}</div>}
+
       <HelpTip title="How to read this list">
         <p>
           <strong>PnL</strong> is estimated profit in SOL for the selected period.{' '}
-          <strong>Win rate</strong> is the share of trades that were profitable.{' '}
-          Higher is not always better — check consistency and don’t chase one lucky streak.
+          <strong>Win rate</strong> is the share of trades that were profitable. Higher is not always
+          better — check consistency and don’t chase one lucky streak.
         </p>
         <p>
           Don’t see someone? Paste their address in <Link to="/tools">Tools</Link> and copy from
@@ -129,15 +146,25 @@ export function Leaderboard() {
       </div>
 
       <p className="data-source">
-        Data: {source === 'api' ? 'live API' : 'demo list (start the server for API data)'}
+        Data: {source === 'api' ? 'API' : 'demo list'} · {filtered.length} shown
       </p>
 
       {loading ? (
-        <div className="notice">Loading wallets…</div>
+        <div className="skeleton-stack">
+          <div className="skeleton-row" />
+          <div className="skeleton-row" />
+          <div className="skeleton-row" />
+        </div>
       ) : filtered.length === 0 ? (
         <div className="empty">
           <p>No wallets match those filters.</p>
-          <button className="btn ghost" onClick={() => { setQ(''); setMinWin(0) }}>
+          <button
+            className="btn ghost"
+            onClick={() => {
+              setQ('')
+              setMinWin(0)
+            }}
+          >
             Clear filters
           </button>
         </div>
@@ -160,7 +187,15 @@ export function Leaderboard() {
                   <td>{i + 1}</td>
                   <td>
                     <div className="wallet-cell">
-                      <span className="mono">{shortAddress(w.address)}</span>
+                      <a
+                        className="mono"
+                        href={explorerAddress(w.address)}
+                        target="_blank"
+                        rel="noreferrer"
+                        title="Open on Solscan"
+                      >
+                        {shortAddress(w.address)}
+                      </a>
                       {w.label && <span className="label-tag">{w.label}</span>}
                       <CopyButton text={w.address} label="Copy addr" />
                     </div>
