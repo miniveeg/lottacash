@@ -1,17 +1,10 @@
 /**
  * Monitoring architecture (frontend-ready interface).
- *
- * In production a backend service should:
- * 1. Subscribe to target wallets via Helius webhooks or Yellowstone gRPC
- * 2. Detect buy/sell swaps
- * 3. For each enabled CopyConfig, compute size and request a Jupiter quote
- * 4. Push a "signal" to the user (websocket / poll) containing the prepared swap
- * 5. User signs; platform never holds keys
- *
- * This module defines the shapes and a local demo simulator.
+ * Local signal store + demo generator. Production uses server webhooks.
  */
 
 import type { CopyConfig } from './types'
+import { notifyApp } from './events'
 
 export type SignalSide = 'buy' | 'sell'
 
@@ -21,7 +14,6 @@ export interface TradeSignal {
   side: SignalSide
   tokenMint: string
   tokenSymbol?: string
-  /** Suggested SOL amount for this user based on their config */
   suggestedSol: number
   detectedAt: number
   status: 'pending' | 'signed' | 'dismissed' | 'failed'
@@ -29,7 +21,10 @@ export interface TradeSignal {
   error?: string
 }
 
-const SIGNALS_KEY = 'lottacash_signals_v1'
+export const SIGNALS_KEY = 'lottacash_signals_v1'
+
+/** USDC mainnet — used for safe demo swaps */
+const DEMO_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'
 
 export function listSignals(): TradeSignal[] {
   try {
@@ -43,6 +38,12 @@ export function listSignals(): TradeSignal[] {
 
 function writeSignals(signals: TradeSignal[]) {
   localStorage.setItem(SIGNALS_KEY, JSON.stringify(signals.slice(0, 50)))
+  notifyApp()
+}
+
+export function clearSignals() {
+  localStorage.removeItem(SIGNALS_KEY)
+  notifyApp()
 }
 
 export function upsertSignal(signal: TradeSignal) {
@@ -68,15 +69,15 @@ export function createDemoSignal(config: CopyConfig, side: SignalSide = 'buy'): 
   const suggested =
     config.sizeMode === 'fixed'
       ? Math.min(config.fixedSol, config.maxSol)
-      : Math.min(0.75, config.maxSol) // placeholder proportional size
+      : Math.min(0.75, config.maxSol)
 
   const signal: TradeSignal = {
     id: `sig_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
     targetAddress: config.targetAddress,
     side,
-    tokenMint: 'So11111111111111111111111111111111111111112', // SOL placeholder; real flow uses detected mint
-    tokenSymbol: side === 'buy' ? 'DEMO' : 'DEMO',
-    suggestedSol: suggested,
+    tokenMint: DEMO_MINT,
+    tokenSymbol: 'USDC',
+    suggestedSol: Math.max(0.01, suggested),
     detectedAt: Date.now(),
     status: 'pending',
   }

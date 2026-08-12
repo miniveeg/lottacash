@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useWallet } from '@solana/wallet-adapter-react'
 import { shortAddress } from '../lib/format'
-import { SOLANA_NETWORK } from '../lib/connection'
+import { SOLANA_NETWORK, getRpcEndpoint } from '../lib/connection'
 import { apiHealth } from '../lib/api'
 import { StatusDot } from '../components/StatusDot'
 import { CopyButton } from '../components/CopyButton'
 import { useToast } from '../components/Toast'
+import { clearCopyConfigs } from '../lib/copyStore'
+import { clearSignals } from '../lib/monitor'
 
 export function Settings() {
   const { publicKey, connected } = useWallet()
@@ -31,8 +33,8 @@ export function Settings() {
       'Clear copy settings and signals saved in this browser? This cannot be undone.'
     )
     if (!ok) return
-    localStorage.removeItem('lottacash_copy_configs_v1')
-    localStorage.removeItem('lottacash_signals_v1')
+    clearCopyConfigs()
+    clearSignals()
     push('Local data cleared', 'success')
   }
 
@@ -61,8 +63,11 @@ export function Settings() {
       <div className="settings-card">
         <h3>Network</h3>
         <p className="mono">{SOLANA_NETWORK}</p>
+        <p className="hint mono" style={{ wordBreak: 'break-all' }}>
+          RPC: {getRpcEndpoint()}
+        </p>
         <p className="hint">
-          Change with <code>VITE_SOLANA_NETWORK</code> and <code>VITE_SOLANA_RPC_URL</code> in{' '}
+          Override with <code>VITE_SOLANA_NETWORK</code> and <code>VITE_SOLANA_RPC_URL</code> in{' '}
           <code>.env</code>.
         </p>
       </div>

@@ -17,17 +17,20 @@ import {
 import { executeDemoSwap } from '../lib/executeSwap'
 import { shortAddress } from '../lib/format'
 import { HelpTip } from '../components/HelpTip'
+import { useAppTick } from '../hooks/useAppTick'
+import { useToast } from '../components/Toast'
 
 export function Activity() {
   const wallet = useWallet()
+  useAppTick()
+  const { push } = useToast()
   const [signals, setSignals] = useState<TradeSignal[]>([])
   const [busyId, setBusyId] = useState<string | null>(null)
   const [msg, setMsg] = useState<string | null>(null)
   const [apiOnline, setApiOnline] = useState(false)
 
   const refresh = useCallback(async () => {
-    const local = listSignals()
-    setSignals(local)
+    setSignals(listSignals())
 
     if (!wallet.publicKey) return
     try {
@@ -35,7 +38,13 @@ export function Activity() {
       setApiOnline(ok)
       if (!ok) return
       const { signals: remote } = await fetchSignals(wallet.publicKey.toBase58())
-      if (remote.length) setSignals(remote)
+      if (remote.length) {
+        // Prefer remote when API has data; keep local-only demos merged by id
+        const byId = new Map<string, TradeSignal>()
+        for (const s of listSignals()) byId.set(s.id, s)
+        for (const s of remote) byId.set(s.id, s)
+        setSignals([...byId.values()].sort((a, b) => b.detectedAt - a.detectedAt))
+      }
     } catch {
       setApiOnline(false)
     }
@@ -43,7 +52,7 @@ export function Activity() {
 
   useEffect(() => {
     refresh()
-    const t = setInterval(refresh, 8000)
+    const t = setInterval(refresh, 10000)
     return () => clearInterval(t)
   }, [refresh])
 
@@ -51,6 +60,7 @@ export function Activity() {
     const configs = listCopyConfigs().filter((c) => c.enabled)
     if (configs.length === 0) {
       setMsg('Turn on at least one copy first (Leaderboard → Copy → save with “on”).')
+      push('Enable a copy first', 'error')
       return
     }
     const cfg = configs[0]
@@ -58,7 +68,8 @@ export function Activity() {
     if (wallet.publicKey && (await apiHealth())) {
       try {
         await createDemoSignalApi(wallet.publicKey.toBase58(), cfg.targetAddress)
-        setMsg('Demo signal created. Scroll down and try Sign swap (uses a tiny amount).')
+        setMsg('Demo signal created. Scroll down and try Sign swap (tiny size).')
+        push('Demo signal ready', 'success')
         await refresh()
         return
       } catch (e) {
@@ -68,12 +79,14 @@ export function Activity() {
 
     createDemoSignal(cfg, 'buy')
     setMsg('Demo signal created on this device.')
+    push('Demo signal ready', 'success')
     refresh()
   }
 
   async function handleSign(signal: TradeSignal) {
     if (!wallet.connected || !wallet.publicKey) {
       setMsg('Connect your wallet first (top right).')
+      push('Connect wallet first', 'error')
       return
     }
 
@@ -89,7 +102,7 @@ export function Activity() {
       const sig = await executeDemoSwap({
         wallet,
         side: signal.side,
-        tokenMint: mint === 'So11111111111111111111111111111111111111112' ? USDC : mint,
+        tokenMint: mint,
         solAmount: Math.min(signal.suggestedSol, 0.05),
         slippageBps,
       })
@@ -103,6 +116,7 @@ export function Activity() {
         }
       }
       setMsg(`Done. Transaction: ${sig.slice(0, 12)}…`)
+      push('Swap submitted', 'success')
     } catch (e) {
       const err = e instanceof Error ? e.message : String(e)
       updateSignalStatus(signal.id, 'failed', { error: err })
@@ -114,6 +128,7 @@ export function Activity() {
         }
       }
       setMsg(`Could not complete swap: ${err}`)
+      push('Swap failed', 'error')
     } finally {
       setBusyId(null)
       refresh()

@@ -1,10 +1,11 @@
 import type { CopyConfig } from './types'
+import { notifyApp } from './events'
 
-const STORAGE_KEY = 'lottacash_copy_configs_v1'
+export const CONFIGS_KEY = 'lottacash_copy_configs_v1'
 
 function readAll(): CopyConfig[] {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY)
+    const raw = localStorage.getItem(CONFIGS_KEY)
     if (!raw) return []
     return JSON.parse(raw) as CopyConfig[]
   } catch {
@@ -13,7 +14,8 @@ function readAll(): CopyConfig[] {
 }
 
 function writeAll(configs: CopyConfig[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(configs))
+  localStorage.setItem(CONFIGS_KEY, JSON.stringify(configs))
+  notifyApp()
 }
 
 export function listCopyConfigs(): CopyConfig[] {
@@ -24,7 +26,9 @@ export function getCopyConfig(targetAddress: string): CopyConfig | undefined {
   return readAll().find((c) => c.targetAddress === targetAddress)
 }
 
-export function saveCopyConfig(config: Omit<CopyConfig, 'createdAt' | 'updatedAt'> & { createdAt?: number }): CopyConfig {
+export function saveCopyConfig(
+  config: Omit<CopyConfig, 'createdAt' | 'updatedAt'> & { createdAt?: number }
+): CopyConfig {
   const now = Date.now()
   const existing = readAll()
   const idx = existing.findIndex((c) => c.targetAddress === config.targetAddress)
@@ -35,11 +39,8 @@ export function saveCopyConfig(config: Omit<CopyConfig, 'createdAt' | 'updatedAt
     updatedAt: now,
   }
 
-  if (idx >= 0) {
-    existing[idx] = full
-  } else {
-    existing.push(full)
-  }
+  if (idx >= 0) existing[idx] = full
+  else existing.push(full)
 
   writeAll(existing)
   return full
@@ -47,6 +48,11 @@ export function saveCopyConfig(config: Omit<CopyConfig, 'createdAt' | 'updatedAt
 
 export function removeCopyConfig(targetAddress: string) {
   writeAll(readAll().filter((c) => c.targetAddress !== targetAddress))
+}
+
+export function clearCopyConfigs() {
+  localStorage.removeItem(CONFIGS_KEY)
+  notifyApp()
 }
 
 export function setCopyEnabled(targetAddress: string, enabled: boolean) {

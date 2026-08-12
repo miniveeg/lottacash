@@ -4,7 +4,7 @@ import { WalletAdapterNetwork } from '@solana/wallet-adapter-base'
 import { WalletModalProvider } from '@solana/wallet-adapter-react-ui'
 import { PhantomWalletAdapter } from '@solana/wallet-adapter-phantom'
 import { SolflareWalletAdapter } from '@solana/wallet-adapter-solflare'
-import { SOLANA_NETWORK } from '../lib/connection'
+import { SOLANA_NETWORK, getRpcEndpoint } from '../lib/connection'
 
 import '@solana/wallet-adapter-react-ui/styles.css'
 
@@ -16,13 +16,7 @@ export const WalletContextProvider: FC<Props> = ({ children }) => {
   const network =
     SOLANA_NETWORK === 'devnet' ? WalletAdapterNetwork.Devnet : WalletAdapterNetwork.Mainnet
 
-  const endpoint = useMemo(() => {
-    const custom = import.meta.env.VITE_SOLANA_RPC_URL as string | undefined
-    if (custom && custom.length > 0) return custom
-    return network === WalletAdapterNetwork.Devnet
-      ? 'https://api.devnet.solana.com'
-      : 'https://api.mainnet-beta.solana.com'
-  }, [network])
+  const endpoint = useMemo(() => getRpcEndpoint(), [])
 
   const wallets = useMemo(
     () => [new PhantomWalletAdapter(), new SolflareWalletAdapter({ network })],

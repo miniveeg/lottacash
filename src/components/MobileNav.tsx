@@ -1,7 +1,9 @@
 import { NavLink } from 'react-router-dom'
 import { listSignals } from '../lib/monitor'
+import { useAppTick } from '../hooks/useAppTick'
 
 export function MobileNav() {
+  useAppTick()
   const pending = listSignals().filter((s) => s.status === 'pending').length
 
   return (

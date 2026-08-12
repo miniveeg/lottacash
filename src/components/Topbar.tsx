@@ -1,8 +1,10 @@
 import { Link, NavLink } from 'react-router-dom'
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui'
 import { listSignals } from '../lib/monitor'
+import { useAppTick } from '../hooks/useAppTick'
 
 export function Topbar() {
+  useAppTick()
   const pending = listSignals().filter((s) => s.status === 'pending').length
 
   return (
