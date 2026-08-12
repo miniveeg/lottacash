@@ -1,9 +1,11 @@
-import { Routes, Route } from 'react-router-dom'
+import { Link, Routes, Route } from 'react-router-dom'
 import { Topbar } from './components/Topbar'
 import { MobileNav } from './components/MobileNav'
 import { ToastProvider } from './components/Toast'
 import { ScrollToTop } from './components/ScrollToTop'
 import { ErrorBoundary } from './components/ErrorBoundary'
+import { OfflineBanner } from './components/OfflineBanner'
+import { SkipLink } from './components/SkipLink'
 import { Home } from './pages/Home'
 import { Dashboard } from './pages/Dashboard'
 import { Leaderboard } from './pages/Leaderboard'
@@ -18,10 +20,12 @@ import { NotFound } from './pages/NotFound'
 export default function App() {
   return (
     <ToastProvider>
+      <SkipLink />
       <ScrollToTop />
       <div className="app">
+        <OfflineBanner />
         <Topbar />
-        <main className="main">
+        <main id="main-content" className="main" tabIndex={-1}>
           <ErrorBoundary>
             <Routes>
               <Route path="/" element={<Home />} />
@@ -40,8 +44,8 @@ export default function App() {
         <MobileNav />
         <footer className="footer">
           <p>
-            Non-custodial. Your keys, your funds. ·{' '}
-            <a href="/settings">Settings</a> · <a href="/help">Help</a>
+            Non-custodial. Your keys, your funds. · <Link to="/settings">Settings</Link> ·{' '}
+            <Link to="/help">Help</Link>
           </p>
           <p className="disclaimer">
             Copy trading can lose money. You approve every trade. This is not financial advice.

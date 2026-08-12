@@ -6,9 +6,14 @@ import { fetchConfigs, saveConfigApi, deleteConfigApi, apiHealth } from '../lib/
 import type { CopyConfig } from '../lib/types'
 import { getWalletByAddress } from '../lib/mockData'
 import { shortAddress } from '../lib/format'
+import { useAppTick } from '../hooks/useAppTick'
+import { useToast } from '../components/Toast'
+import { explorerAddress } from '../lib/solanaTools'
 
 export function ActiveCopies() {
   const { connected, publicKey } = useWallet()
+  useAppTick()
+  const { push } = useToast()
   const [configs, setConfigs] = useState<CopyConfig[]>([])
   const [apiOnline, setApiOnline] = useState(false)
 
@@ -61,10 +66,13 @@ export function ActiveCopies() {
         /* keep local */
       }
     }
+    push(enabled ? 'Copying turned on' : 'Copying turned off', 'info')
     refresh()
   }
 
   async function remove(address: string) {
+    const ok = window.confirm('Remove this copy setup from this device?')
+    if (!ok) return
     removeCopyConfig(address)
     if (publicKey && apiOnline) {
       try {
@@ -73,8 +81,11 @@ export function ActiveCopies() {
         /* keep local delete */
       }
     }
+    push('Copy removed', 'info')
     refresh()
   }
+
+  const enabledCount = configs.filter((c) => c.enabled).length
 
   return (
     <div className="page active-copies">
@@ -87,7 +98,16 @@ export function ActiveCopies() {
       </div>
 
       {!connected && (
-        <div className="banner-info">Connect your wallet to sync copies across the API when it’s running.</div>
+        <div className="banner-info">
+          Connect your wallet to sync copies with the API when it’s running.
+        </div>
+      )}
+
+      {configs.length > 0 && (
+        <p className="data-source">
+          {enabledCount} active · {configs.length} saved ·{' '}
+          {apiOnline ? 'API online' : 'local only'}
+        </p>
       )}
 
       {configs.length === 0 ? (
@@ -103,16 +123,27 @@ export function ActiveCopies() {
           {configs.map((c) => {
             const meta = getWalletByAddress(c.targetAddress)
             return (
-              <div key={c.targetAddress} className="copy-card">
+              <div key={c.targetAddress} className={`copy-card ${c.enabled ? '' : 'is-off'}`}>
                 <div className="copy-card-main">
-                  <div className="mono">{shortAddress(c.targetAddress, 6)}</div>
-                  {meta?.label && <div className="label-tag">{meta.label}</div>}
+                  <div className="wallet-cell">
+                    <a
+                      className="mono"
+                      href={explorerAddress(c.targetAddress)}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      {shortAddress(c.targetAddress, 6)}
+                    </a>
+                    {meta?.label && <span className="label-tag">{meta.label}</span>}
+                    <span className={`status-pill ${c.enabled ? 'on' : 'off'}`}>
+                      {c.enabled ? 'On' : 'Off'}
+                    </span>
+                  </div>
                   <div className="copy-meta">
                     {c.sizeMode === 'fixed' ? `${c.fixedSol} SOL each trade` : 'Match their size'}
                     {' · '}max {c.maxSol} SOL
                     {' · '}
                     {(c.slippageBps / 100).toFixed(1)}% slip
-                    {c.enabled ? ' · On' : ' · Off'}
                   </div>
                 </div>
                 <div className="copy-card-actions">
@@ -136,10 +167,6 @@ export function ActiveCopies() {
           })}
         </div>
       )}
-
-      <p className="data-source" style={{ marginTop: '1.25rem' }}>
-        {apiOnline ? 'Synced with server when possible.' : 'Saved on this device (API offline).'}
-      </p>
     </div>
   )
 }

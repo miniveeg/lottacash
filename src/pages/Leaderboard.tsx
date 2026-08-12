@@ -17,9 +17,21 @@ const TABS: { id: Timeframe; label: string }[] = [
 
 type SortKey = 'pnl' | 'winRate' | 'trades'
 
+const TF_KEY = 'lottacash_lb_timeframe'
+
+function readSavedTimeframe(): Timeframe {
+  try {
+    const v = sessionStorage.getItem(TF_KEY)
+    if (v === 'daily' || v === 'weekly' || v === 'all') return v
+  } catch {
+    /* ignore */
+  }
+  return 'weekly'
+}
+
 export function Leaderboard() {
   const { connected } = useWallet()
-  const [timeframe, setTimeframe] = useState<Timeframe>('weekly')
+  const [timeframe, setTimeframe] = useState<Timeframe>(readSavedTimeframe)
   const [wallets, setWallets] = useState<WalletStats[]>([])
   const [source, setSource] = useState<'api' | 'mock'>('mock')
   const [loading, setLoading] = useState(true)
@@ -28,6 +40,15 @@ export function Leaderboard() {
   const [sort, setSort] = useState<SortKey>('pnl')
   const [minWin, setMinWin] = useState(0)
   const [reloadKey, setReloadKey] = useState(0)
+
+  function changeTimeframe(tf: Timeframe) {
+    setTimeframe(tf)
+    try {
+      sessionStorage.setItem(TF_KEY, tf)
+    } catch {
+      /* ignore */
+    }
+  }
 
   const load = useCallback(() => {
     let cancelled = false
@@ -114,7 +135,7 @@ export function Leaderboard() {
           <button
             key={t.id}
             className={`tab ${timeframe === t.id ? 'active' : ''}`}
-            onClick={() => setTimeframe(t.id)}
+            onClick={() => changeTimeframe(t.id)}
           >
             {t.label}
           </button>
