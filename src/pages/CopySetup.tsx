@@ -11,6 +11,14 @@ import { FeeNotice } from '../components/FeeNotice'
 import { useToast } from '../components/Toast'
 import { isValidSolanaAddress, explorerAddress } from '../lib/solanaTools'
 import { estimateFeeSol, feesEnabled, formatFeePercent } from '../lib/fees'
+import {
+  fetchSolUsdPrice,
+  minCopySolFromPrice,
+  getMinCopyUsd,
+  estimateRoundTripCostPct,
+  formatMinCopyLabel,
+  validateCopySize,
+} from '../lib/minTrade'
 
 export function CopySetup() {
   const { address } = useParams<{ address: string }>()
@@ -28,6 +36,8 @@ export function CopySetup() {
   const [existing, setExisting] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [solUsd, setSolUsd] = useState(140)
+  const [minSol, setMinSol] = useState(minCopySolFromPrice(140))
 
   const valid = !!address && isValidSolanaAddress(address)
 
@@ -35,6 +45,25 @@ export function CopySetup() {
     const n = Number(fixedSol)
     return Number.isFinite(n) && n > 0 ? n : 0
   }, [fixedSol])
+
+  useEffect(() => {
+    let cancelled = false
+    fetchSolUsdPrice().then((p) => {
+      if (cancelled) return
+      setSolUsd(p)
+      const m = minCopySolFromPrice(p)
+      setMinSol(m)
+      // Seed default size to at least minimum for new setups
+      setFixedSol((prev) => {
+        const n = Number(prev)
+        if (!Number.isFinite(n) || n < m) return m.toFixed(3)
+        return prev
+      })
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   useEffect(() => {
     if (!address || !valid) return
@@ -54,8 +83,11 @@ export function CopySetup() {
     const fixed = Number(fixedSol)
     const max = Number(maxSol)
     const slip = Number(slippage)
-    if (!Number.isFinite(fixed) || fixed <= 0) {
-      setError('Fixed SOL must be greater than 0')
+
+    const sizeErr =
+      sizeMode === 'fixed' ? validateCopySize(fixed, minSol) : validateCopySize(max, minSol)
+    if (sizeErr) {
+      setError(sizeErr)
       return
     }
     if (!Number.isFinite(max) || max < fixed) {
@@ -68,8 +100,8 @@ export function CopySetup() {
     const payload = {
       targetAddress: address,
       sizeMode,
-      fixedSol: fixed,
-      maxSol: max,
+      fixedSol: sizeMode === 'fixed' ? fixed : Math.max(fixed, minSol),
+      maxSol: Math.max(max, minSol),
       slippageBps: Math.round((Number.isFinite(slip) ? slip : 1) * 100),
       enabled,
     }
@@ -110,6 +142,14 @@ export function CopySetup() {
     navigate('/copies')
   }
 
+  const quickSizes = useMemo(() => {
+    const base = [minSol, minSol * 2, 0.25, 0.5, 1]
+    const uniq = [...new Set(base.map((n) => Number(n.toFixed(3))))].filter((n) => n >= minSol)
+    return uniq.slice(0, 5).map((n) => n.toFixed(3))
+  }, [minSol])
+
+  const rtPct = estimateRoundTripCostPct()
+
   if (!address || !valid) {
     return (
       <div className="page">
@@ -143,8 +183,20 @@ export function CopySetup() {
           We remember this wallet and your size rules. When they trade, a <strong>signal</strong>{' '}
           appears under Activity. You review it and sign in your own wallet — or ignore it.
         </p>
-        <p>Start with a small fixed amount (0.1–0.3 SOL) and a max cap while you learn.</p>
+        <p>
+          A full copy is usually <strong>two swaps</strong> (buy the token, later sell back to SOL).
+          Each swap has network + pool fees{feesEnabled() ? ' + platform fee' : ''}. That’s why we
+          enforce a minimum size.
+        </p>
       </HelpTip>
+
+      <div className="banner-info">
+        <strong>{formatMinCopyLabel(minSol, solUsd)}</strong>
+        <br />
+        Rough round-trip cost can be ~{rtPct.toFixed(1)}% of the trade (platform + typical pool +
+        network). A coin needs to move more than that for you to come out ahead — a ~5% move only
+        helps if size isn’t dust. Minimum is ≈ ${getMinCopyUsd()} so small wins aren’t pure fee.
+      </div>
 
       <FeeNotice tradeSol={sizeMode === 'fixed' ? previewSol : undefined} />
 
@@ -174,7 +226,8 @@ export function CopySetup() {
                   onChange={() => setSizeMode('proportional')}
                 />
                 <span>
-                  <strong>Match their size</strong> — try 1:1, still limited by your max
+                  <strong>Match their size</strong> — try 1:1, still limited by your max (and the
+                  minimum)
                 </span>
               </label>
             </div>
@@ -185,23 +238,23 @@ export function CopySetup() {
               <label>SOL each time they trade</label>
               <input
                 type="number"
-                step="0.01"
-                min="0.01"
+                step="0.001"
+                min={minSol}
                 value={fixedSol}
                 onChange={(e) => setFixedSol(e.target.value)}
               />
               <p className="field-hint">
-                Example: 0.2 means every copy uses about 0.2 SOL.
+                Minimum {minSol.toFixed(3)} SOL (≈ ${getMinCopyUsd()}).
                 {feesEnabled() && previewSol > 0 && (
                   <>
                     {' '}
-                    At {formatFeePercent()}, fee ≈ {estimateFeeSol(previewSol).toFixed(4)} SOL per
-                    trade.
+                    Platform fee {formatFeePercent()} ≈ {estimateFeeSol(previewSol).toFixed(4)} SOL
+                    per swap (buy and sell each pay it).
                   </>
                 )}
               </p>
               <div className="quick-sizes">
-                {['0.05', '0.1', '0.25', '0.5', '1'].map((v) => (
+                {quickSizes.map((v) => (
                   <button key={v} type="button" className="btn small" onClick={() => setFixedSol(v)}>
                     {v} SOL
                   </button>
@@ -215,7 +268,7 @@ export function CopySetup() {
             <input
               type="number"
               step="0.1"
-              min="0.1"
+              min={minSol}
               value={maxSol}
               onChange={(e) => setMaxSol(e.target.value)}
             />

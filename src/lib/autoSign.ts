@@ -1,21 +1,15 @@
 import { notifyApp } from './events'
+import { ABSOLUTE_MIN_COPY_SOL } from './minTrade'
 
 const KEY = 'lottacash_auto_sign_v1'
 
 export interface AutoSignSettings {
-  /** Master switch — off by default */
   enabled: boolean
-  /** User acknowledged experimental risks */
   acknowledged: boolean
-  /** Hard cap per auto trade in SOL */
   maxSolPerTrade: number
-  /** Stop after this many auto trades in the current browser session */
   maxPerSession: number
-  /** Seconds between scans for pending signals */
   pollSeconds: number
-  /** Only auto-sign while this browser tab is focused */
   onlyWhenFocused: boolean
-  /** Session counters (reset on reload) */
   sessionSigned: number
   sessionFailed: number
   lastError?: string
@@ -25,7 +19,8 @@ export interface AutoSignSettings {
 const DEFAULTS: AutoSignSettings = {
   enabled: false,
   acknowledged: false,
-  maxSolPerTrade: 0.1,
+  // Default auto max should still clear the ~$2 idea when SOL isn’t sky-high
+  maxSolPerTrade: 0.05,
   maxPerSession: 10,
   pollSeconds: 12,
   onlyWhenFocused: true,
@@ -41,9 +36,11 @@ export function getAutoSignSettings(): AutoSignSettings {
     return {
       ...DEFAULTS,
       ...parsed,
-      // Never restore enabled across cold starts without re-ack in same session flags
       enabled: Boolean(parsed.enabled) && Boolean(parsed.acknowledged),
-      maxSolPerTrade: Math.min(5, Math.max(0.01, Number(parsed.maxSolPerTrade) || 0.1)),
+      maxSolPerTrade: Math.min(
+        5,
+        Math.max(ABSOLUTE_MIN_COPY_SOL, Number(parsed.maxSolPerTrade) || DEFAULTS.maxSolPerTrade)
+      ),
       maxPerSession: Math.min(100, Math.max(1, Math.floor(Number(parsed.maxPerSession) || 10))),
       pollSeconds: Math.min(120, Math.max(8, Math.floor(Number(parsed.pollSeconds) || 12))),
       sessionSigned: Number(parsed.sessionSigned) || 0,
@@ -85,7 +82,6 @@ export function bumpAutoSignStat(kind: 'signed' | 'failed', error?: string) {
   })
 }
 
-/** Signals already attempted this session (avoid double-fire) */
 const attempted = new Set<string>()
 
 export function wasAutoAttempted(id: string) {
