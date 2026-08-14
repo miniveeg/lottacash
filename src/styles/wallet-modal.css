@@ -70,7 +70,6 @@
 
 /*
  * Close button — roomy hit target, small centered glyph
- * Library default uses a large padded SVG that overflows a tight box.
  */
 .wallet-adapter-modal-button-close {
   position: absolute !important;
@@ -108,21 +107,22 @@
   outline-offset: 2px !important;
 }
 
-/* Force the SVG small so it never fills the whole button */
+/* Smaller X glyph */
 .wallet-adapter-modal-button-close svg {
   fill: #a8b2ab !important;
-  width: 12px !important;
-  height: 12px !important;
-  max-width: 12px !important;
-  max-height: 12px !important;
-  min-width: 12px !important;
-  min-height: 12px !important;
+  width: 9px !important;
+  height: 9px !important;
+  max-width: 9px !important;
+  max-height: 9px !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
   display: block !important;
-  margin: 0 auto !important;
+  margin: 0 !important;
   padding: 0 !important;
-  flex: 0 0 12px !important;
+  flex: none !important;
   pointer-events: none !important;
-  transform: scale(1) !important;
+  transform: scale(0.75) !important;
+  transform-origin: center !important;
 }
 
 .wallet-adapter-modal-button-close:hover svg {
