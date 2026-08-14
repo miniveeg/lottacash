@@ -2,10 +2,11 @@ import { VersionedTransaction } from '@solana/web3.js'
 import type { WalletContextState } from '@solana/wallet-adapter-react'
 import { getJupiterQuote, getJupiterSwapTransaction, solToLamports, SOL_MINT } from './jupiter'
 import { getConnection } from './connection'
+import { estimateFeeSol, feesEnabled, getPlatformFeeBps } from './fees'
+import { reportFeeEvent } from './api'
 
 /**
- * Demo / practice swap flow:
- * quote → build → user signs → send → confirm
+ * Copy / demo swap flow with optional platform fee (Jupiter platformFeeBps).
  */
 export async function executeDemoSwap(opts: {
   wallet: WalletContextState
@@ -43,6 +44,8 @@ export async function executeDemoSwap(opts: {
   const { swapTransaction } = await getJupiterSwapTransaction({
     quoteResponse: quote,
     userPublicKey: wallet.publicKey.toBase58(),
+    inputMint,
+    outputMint,
   })
 
   if (!swapTransaction) {
@@ -69,6 +72,20 @@ export async function executeDemoSwap(opts: {
     },
     'confirmed'
   )
+
+  // Fire-and-forget revenue tracking (does not block UX)
+  if (feesEnabled()) {
+    reportFeeEvent({
+      txSignature: sig,
+      ownerWallet: wallet.publicKey.toBase58(),
+      side,
+      tradeSol: solAmount,
+      feeBps: getPlatformFeeBps(),
+      feeSolEstimate: estimateFeeSol(solAmount),
+    }).catch(() => {
+      /* ignore */
+    })
+  }
 
   return sig
 }

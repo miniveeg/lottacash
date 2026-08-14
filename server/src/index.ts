@@ -14,12 +14,14 @@ import {
 import { getLeaderboard } from './leaderboard.js'
 import { config, hasHelius } from './config.js'
 import { startMonitorWorker, getMonitorStatus, runMonitorCycle } from './monitorWorker.js'
+import { addFeeEvent, feeStats } from './feeLedger.js'
 import type { CopyConfig, TradeSignal } from './types.js'
 
 const app = express()
 const PORT = config.port
 const WEBHOOK_SECRET = config.webhookSecret
 const VERSION = config.version
+const DEFAULT_FEE_BPS = Number(process.env.PLATFORM_FEE_BPS || 50)
 
 app.use(cors({ origin: true }))
 app.use(express.json({ limit: '2mb' }))
@@ -48,6 +50,7 @@ app.get('/api/health', (_req, res) => {
     version: VERSION,
     time: Date.now(),
     helius: hasHelius(),
+    feeBpsDefault: DEFAULT_FEE_BPS,
     monitor: getMonitorStatus(),
   })
 })
@@ -63,6 +66,29 @@ app.post('/api/monitor/run', async (_req, res) => {
   } catch (e) {
     res.status(500).json({ error: e instanceof Error ? e.message : 'run failed' })
   }
+})
+
+app.post('/api/fees/event', (req, res) => {
+  const txSignature = String(req.body?.txSignature || '').trim()
+  const ownerWallet = String(req.body?.ownerWallet || '').trim()
+  if (!txSignature || !ownerWallet) {
+    return res.status(400).json({ error: 'txSignature and ownerWallet required' })
+  }
+  addFeeEvent({
+    id: randomUUID(),
+    txSignature: txSignature.slice(0, 128),
+    ownerWallet: ownerWallet.slice(0, 64),
+    side: String(req.body?.side || 'buy').slice(0, 8),
+    tradeSol: finiteNumber(req.body?.tradeSol, 0),
+    feeBps: Math.min(1000, Math.max(0, Math.floor(finiteNumber(req.body?.feeBps, DEFAULT_FEE_BPS)))),
+    feeSolEstimate: finiteNumber(req.body?.feeSolEstimate, 0),
+    at: Date.now(),
+  })
+  res.json({ ok: true })
+})
+
+app.get('/api/fees/stats', (_req, res) => {
+  res.json({ ...feeStats(), feeBpsDefault: DEFAULT_FEE_BPS })
 })
 
 app.get('/api/leaderboard', (req, res) => {
@@ -171,23 +197,16 @@ app.post('/api/signals/demo', (req, res) => {
   res.json({ signal })
 })
 
-/**
- * Helius / external webhook.
- * Point Helius Address Webhook or custom worker here.
- * Header: x-webhook-secret
- */
 app.post('/api/webhook/trade', (req, res) => {
   const secret = req.header('x-webhook-secret')
   if (secret !== WEBHOOK_SECRET) return res.status(401).json({ error: 'unauthorized' })
 
-  // Support both our simple schema and a Helius-like payload
   let targetAddress = String(req.body?.targetAddress || req.body?.accountData?.[0]?.account || '').trim()
   let tokenMint = String(req.body?.tokenMint || '').trim()
   let tokenSymbol = req.body?.tokenSymbol ? String(req.body.tokenSymbol) : undefined
   let side: 'buy' | 'sell' = req.body?.side === 'sell' ? 'sell' : 'buy'
   let amountSolApprox = finiteNumber(req.body?.amountSolApprox, 0.5)
 
-  // Helius raw webhook: try feePayer as target
   if (!targetAddress && req.body?.feePayer) {
     targetAddress = String(req.body.feePayer)
   }
@@ -237,5 +256,6 @@ app.use((err: unknown, _req: express.Request, res: express.Response, _next: expr
 
 app.listen(PORT, () => {
   console.log(`LottaCash API v${VERSION} on http://localhost:${PORT}`)
+  console.log(`Default platform fee: ${DEFAULT_FEE_BPS} bps`)
   startMonitorWorker()
 })

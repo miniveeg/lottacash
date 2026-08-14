@@ -68,6 +68,29 @@ export async function runMonitorOnce() {
   return req<{ ok: boolean; status: unknown }>('/monitor/run', { method: 'POST' })
 }
 
+export async function reportFeeEvent(body: {
+  txSignature: string
+  ownerWallet: string
+  side: string
+  tradeSol: number
+  feeBps: number
+  feeSolEstimate: number
+}) {
+  return req<{ ok: boolean }>('/fees/event', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
+}
+
+export async function fetchFeeStats() {
+  return req<{
+    totalEvents: number
+    totalTradeSol: number
+    totalFeeSolEstimate: number
+    feeBpsDefault: number
+  }>('/fees/stats')
+}
+
 export async function fetchLeaderboard(timeframe: Timeframe) {
   return req<{ timeframe: string; wallets: WalletStats[] }>(`/leaderboard?timeframe=${timeframe}`)
 }
