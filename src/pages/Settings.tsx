@@ -2,24 +2,42 @@ import { useEffect, useState } from 'react'
 import { useWallet } from '@solana/wallet-adapter-react'
 import { shortAddress } from '../lib/format'
 import { SOLANA_NETWORK, getRpcEndpoint } from '../lib/connection'
-import { fetchHealth, runMonitorOnce, type HealthInfo } from '../lib/api'
+import { fetchHealth, runMonitorOnce, fetchFeeStats, type HealthInfo } from '../lib/api'
 import { StatusDot } from '../components/StatusDot'
 import { CopyButton } from '../components/CopyButton'
+import { FeeNotice } from '../components/FeeNotice'
 import { useToast } from '../components/Toast'
 import { clearCopyConfigs } from '../lib/copyStore'
 import { clearSignals } from '../lib/monitor'
+import {
+  feesEnabled,
+  formatFeePercent,
+  getFeeWallet,
+  getPlatformFeeBps,
+} from '../lib/fees'
 
 export function Settings() {
   const { publicKey, connected } = useWallet()
   const [health, setHealth] = useState<HealthInfo | null>(null)
   const [checking, setChecking] = useState(false)
   const [runningMon, setRunningMon] = useState(false)
+  const [feeStats, setFeeStats] = useState<{
+    totalEvents: number
+    totalTradeSol: number
+    totalFeeSolEstimate: number
+  } | null>(null)
   const { push } = useToast()
 
   async function recheck() {
     setChecking(true)
     const h = await fetchHealth()
     setHealth(h)
+    try {
+      const s = await fetchFeeStats()
+      setFeeStats(s)
+    } catch {
+      setFeeStats(null)
+    }
     setChecking(false)
     push(h?.ok ? 'API is online' : 'API is offline', h?.ok ? 'success' : 'error')
   }
@@ -40,6 +58,9 @@ export function Settings() {
 
   useEffect(() => {
     fetchHealth().then(setHealth)
+    fetchFeeStats()
+      .then(setFeeStats)
+      .catch(() => setFeeStats(null))
   }, [])
 
   function clearLocalData() {
@@ -54,13 +75,14 @@ export function Settings() {
 
   const apiOk = health === null ? null : !!health.ok
   const mon = health?.monitor
+  const feeWallet = getFeeWallet()
 
   return (
     <div className="page settings">
       <div className="page-header row-header">
         <div>
           <h1>Settings</h1>
-          <p>Connection, monitor service, and safety.</p>
+          <p>Connection, fees, monitor, and safety.</p>
         </div>
         <StatusDot ok={apiOk} />
       </div>
@@ -75,6 +97,34 @@ export function Settings() {
         ) : (
           <p>Not connected — use the button in the top right.</p>
         )}
+      </div>
+
+      <div className="settings-card">
+        <h3>Platform fee (your revenue)</h3>
+        <FeeNotice />
+        <div className="hint" style={{ lineHeight: 1.6, marginTop: '0.5rem' }}>
+          <div>Configured rate: {getPlatformFeeBps()} bps ({formatFeePercent()})</div>
+          <div>
+            Fee wallet:{' '}
+            {feeWallet ? (
+              <span className="mono">{shortAddress(feeWallet, 4)}</span>
+            ) : (
+              <span>not set — add VITE_FEE_WALLET to .env</span>
+            )}
+          </div>
+          <div>Active: {feesEnabled() ? 'yes' : 'no'}</div>
+          {feeStats && (
+            <div style={{ marginTop: '0.35rem' }}>
+              Tracked swaps: {feeStats.totalEvents} · est. fees:{' '}
+              {feeStats.totalFeeSolEstimate.toFixed(4)} SOL · volume:{' '}
+              {feeStats.totalTradeSol.toFixed(3)} SOL
+            </div>
+          )}
+        </div>
+        <p className="hint" style={{ marginTop: '0.65rem' }}>
+          Example: user copies with $5 → you earn about $0.025 at 0.5%. Same math in SOL: 1 SOL trade
+          → 0.005 SOL fee.
+        </p>
       </div>
 
       <div className="settings-card">
@@ -127,9 +177,6 @@ export function Settings() {
         >
           {runningMon ? 'Running…' : 'Run monitor now'}
         </button>
-        <p className="hint" style={{ marginTop: '0.65rem' }}>
-          For production reliability, set <code>HELIUS_API_KEY</code> in <code>server/.env</code>.
-        </p>
       </div>
 
       <div className="settings-card">

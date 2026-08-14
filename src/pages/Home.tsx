@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { Steps } from '../components/Steps'
+import { feesEnabled, formatFeePercent } from '../lib/fees'
 
 export function Home() {
   return (
@@ -19,6 +20,12 @@ export function Home() {
             Go to dashboard
           </Link>
         </div>
+        {feesEnabled() && (
+          <p className="hero-fee">
+            Platform fee: <strong>{formatFeePercent()}</strong> on each copy swap you sign — built into
+            the Jupiter trade, not a separate withdrawal.
+          </p>
+        )}
       </section>
 
       <section className="panel guide-panel">
@@ -41,7 +48,7 @@ export function Home() {
           <div className="feature-icon">1</div>
           <h3>Non-custodial</h3>
           <p>
-            You connect the wallet you already own. We never create a "trading wallet" for you or ask
+            You connect the wallet you already own. We never create a “trading wallet” for you or ask
             for your seed phrase.
           </p>
         </div>

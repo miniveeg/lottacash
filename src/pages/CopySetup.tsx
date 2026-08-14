@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useWallet } from '@solana/wallet-adapter-react'
 import { getWalletByAddress } from '../lib/mockData'
@@ -7,9 +7,10 @@ import { saveConfigApi, deleteConfigApi, apiHealth } from '../lib/api'
 import type { SizeMode } from '../lib/types'
 import { shortAddress } from '../lib/format'
 import { HelpTip } from '../components/HelpTip'
+import { FeeNotice } from '../components/FeeNotice'
 import { useToast } from '../components/Toast'
-import { isValidSolanaAddress } from '../lib/solanaTools'
-import { explorerAddress } from '../lib/solanaTools'
+import { isValidSolanaAddress, explorerAddress } from '../lib/solanaTools'
+import { estimateFeeSol, feesEnabled, formatFeePercent } from '../lib/fees'
 
 export function CopySetup() {
   const { address } = useParams<{ address: string }>()
@@ -29,6 +30,11 @@ export function CopySetup() {
   const [error, setError] = useState<string | null>(null)
 
   const valid = !!address && isValidSolanaAddress(address)
+
+  const previewSol = useMemo(() => {
+    const n = Number(fixedSol)
+    return Number.isFinite(n) && n > 0 ? n : 0
+  }, [fixedSol])
 
   useEffect(() => {
     if (!address || !valid) return
@@ -90,6 +96,8 @@ export function CopySetup() {
 
   async function handleRemove() {
     if (!address) return
+    const ok = window.confirm('Stop copying this wallet and remove your settings?')
+    if (!ok) return
     removeCopyConfig(address)
     if (publicKey) {
       try {
@@ -138,6 +146,8 @@ export function CopySetup() {
         <p>Start with a small fixed amount (0.1–0.3 SOL) and a max cap while you learn.</p>
       </HelpTip>
 
+      <FeeNotice tradeSol={sizeMode === 'fixed' ? previewSol : undefined} />
+
       {!connected ? (
         <div className="banner-warn">
           <strong>Connect your wallet</strong> (button in the top right) to save these settings.
@@ -180,7 +190,23 @@ export function CopySetup() {
                 value={fixedSol}
                 onChange={(e) => setFixedSol(e.target.value)}
               />
-              <p className="field-hint">Example: 0.2 means every copy uses about 0.2 SOL.</p>
+              <p className="field-hint">
+                Example: 0.2 means every copy uses about 0.2 SOL.
+                {feesEnabled() && previewSol > 0 && (
+                  <>
+                    {' '}
+                    At {formatFeePercent()}, fee ≈ {estimateFeeSol(previewSol).toFixed(4)} SOL per
+                    trade.
+                  </>
+                )}
+              </p>
+              <div className="quick-sizes">
+                {['0.05', '0.1', '0.25', '0.5', '1'].map((v) => (
+                  <button key={v} type="button" className="btn small" onClick={() => setFixedSol(v)}>
+                    {v} SOL
+                  </button>
+                ))}
+              </div>
             </div>
           )}
 

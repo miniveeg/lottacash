@@ -17,8 +17,10 @@ import {
 import { executeDemoSwap } from '../lib/executeSwap'
 import { shortAddress } from '../lib/format'
 import { HelpTip } from '../components/HelpTip'
+import { FeeNotice } from '../components/FeeNotice'
 import { useAppTick } from '../hooks/useAppTick'
 import { useToast } from '../components/Toast'
+import { estimateFeeSol, feesEnabled, formatFeePercent } from '../lib/fees'
 
 type Filter = 'all' | 'pending' | 'signed' | 'failed' | 'dismissed'
 
@@ -77,7 +79,7 @@ export function Activity() {
     if (wallet.publicKey && (await apiHealth())) {
       try {
         await createDemoSignalApi(wallet.publicKey.toBase58(), cfg.targetAddress)
-        setMsg('Demo signal created. Scroll down and try Sign swap (tiny size).')
+        setMsg('Demo signal created. Scroll down and try Sign swap (uses a tiny size for safety).')
         push('Demo signal ready', 'success')
         await refresh()
         return
@@ -92,7 +94,7 @@ export function Activity() {
     refresh()
   }
 
-  async function handleSign(signal: TradeSignal) {
+  async function handleSign(signal: TradeSignal, isDemo: boolean) {
     if (!wallet.connected || !wallet.publicKey) {
       setMsg('Connect your wallet first (top right).')
       push('Connect wallet first', 'error')
@@ -101,6 +103,11 @@ export function Activity() {
 
     const cfg = listCopyConfigs().find((c) => c.targetAddress === signal.targetAddress)
     const slippageBps = cfg?.slippageBps ?? 200
+    // Demo stays tiny; live signals use suggested size (still capped by config max if present)
+    const maxCap = cfg?.maxSol ?? signal.suggestedSol
+    const solAmount = isDemo
+      ? Math.min(signal.suggestedSol, 0.05)
+      : Math.min(signal.suggestedSol, maxCap)
 
     setBusyId(signal.id)
     setMsg(null)
@@ -112,7 +119,7 @@ export function Activity() {
         wallet,
         side: signal.side,
         tokenMint: mint,
-        solAmount: Math.min(signal.suggestedSol, 0.05),
+        solAmount,
         slippageBps,
       })
 
@@ -124,7 +131,10 @@ export function Activity() {
           /* ignore */
         }
       }
-      setMsg(`Done. Transaction: ${sig.slice(0, 12)}…`)
+      const feePart = feesEnabled()
+        ? ` · fee ≈ ${estimateFeeSol(solAmount).toFixed(4)} SOL`
+        : ''
+      setMsg(`Done. Tx ${sig.slice(0, 12)}… · size ${solAmount} SOL${feePart}`)
       push('Swap submitted', 'success')
     } catch (e) {
       const err = e instanceof Error ? e.message : String(e)
@@ -198,10 +208,12 @@ export function Activity() {
           that alert.
         </p>
         <p>
-          Live monitoring is still being connected. Use <strong>Generate demo signal</strong> to
-          practice the sign flow safely with a very small size.
+          Use <strong>Generate demo signal</strong> to practice with a very small size. Live signals
+          use the size you configured when you set up the copy.
         </p>
       </HelpTip>
+
+      <FeeNotice />
 
       {enabledCount === 0 && (
         <div className="banner-info">
@@ -251,48 +263,60 @@ export function Activity() {
         </div>
       ) : (
         <div className="signals-list">
-          {visible.map((s) => (
-            <div key={s.id} className={`signal-card status-${s.status}`}>
-              <div className="signal-main">
-                <div className="signal-title">
-                  <span className={`side ${s.side}`}>{s.side.toUpperCase()}</span>
-                  <span className="mono">{shortAddress(s.targetAddress, 4)}</span>
-                  <span className="muted">{s.tokenSymbol || 'token'}</span>
-                </div>
-                <div className="signal-meta">
-                  About {s.suggestedSol} SOL · {new Date(s.detectedAt).toLocaleString()} ·{' '}
-                  {s.status}
-                </div>
-                {s.txSignature && (
-                  <a
-                    className="tx-link"
-                    href={`https://solscan.io/tx/${s.txSignature}`}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    View on Solscan
-                  </a>
-                )}
-                {s.error && <div className="error-text">{s.error}</div>}
-              </div>
-              <div className="signal-actions">
-                {s.status === 'pending' && (
-                  <>
-                    <button
-                      className="btn small primary"
-                      disabled={busyId === s.id || !wallet.connected}
-                      onClick={() => handleSign(s)}
+          {visible.map((s) => {
+            const isDemo = s.id.startsWith('sig_') || s.tokenSymbol === 'USDC' || s.tokenSymbol === 'DEMO'
+            const tradeSol = Math.min(s.suggestedSol, isDemo ? 0.05 : s.suggestedSol)
+            const feeEst = feesEnabled() ? estimateFeeSol(tradeSol) : 0
+            return (
+              <div key={s.id} className={`signal-card status-${s.status}`}>
+                <div className="signal-main">
+                  <div className="signal-title">
+                    <span className={`side ${s.side}`}>{s.side.toUpperCase()}</span>
+                    <span className="mono">{shortAddress(s.targetAddress, 4)}</span>
+                    <span className="muted">{s.tokenSymbol || 'token'}</span>
+                  </div>
+                  <div className="signal-meta">
+                    About {s.suggestedSol} SOL
+                    {feesEnabled() && s.status === 'pending' && (
+                      <>
+                        {' '}
+                        · fee ~{feeEst.toFixed(4)} SOL ({formatFeePercent()})
+                      </>
+                    )}
+                    {' · '}
+                    {new Date(s.detectedAt).toLocaleString()} · {s.status}
+                  </div>
+                  {s.txSignature && (
+                    <a
+                      className="tx-link"
+                      href={`https://solscan.io/tx/${s.txSignature}`}
+                      target="_blank"
+                      rel="noreferrer"
                     >
-                      {busyId === s.id ? 'Signing…' : 'Sign swap'}
-                    </button>
-                    <button className="btn small" onClick={() => dismiss(s.id)}>
-                      Dismiss
-                    </button>
-                  </>
-                )}
+                      View on Solscan
+                    </a>
+                  )}
+                  {s.error && <div className="error-text">{s.error}</div>}
+                </div>
+                <div className="signal-actions">
+                  {s.status === 'pending' && (
+                    <>
+                      <button
+                        className="btn small primary"
+                        disabled={busyId === s.id || !wallet.connected}
+                        onClick={() => handleSign(s, isDemo)}
+                      >
+                        {busyId === s.id ? 'Signing…' : 'Sign swap'}
+                      </button>
+                      <button className="btn small" onClick={() => dismiss(s.id)}>
+                        Dismiss
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
     </div>

@@ -15,3 +15,26 @@
 .fee-notice strong {
   color: var(--text);
 }
+
+.hero-fee {
+  margin-top: 1rem;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  max-width: 36rem;
+}
+
+.hero-fee strong {
+  color: var(--accent);
+}
+
+.quick-sizes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.55rem;
+}
+
+.quick-sizes .btn {
+  min-height: 32px;
+  font-size: 0.75rem;
+}
