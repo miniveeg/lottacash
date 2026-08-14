@@ -1,20 +1,36 @@
-/* LottaCash — full restyle of @solana/wallet-adapter-react-ui modal */
+/*
+ * LottaCash wallet modal overrides
+ * Official structure (@solana/wallet-adapter-react-ui):
+ *   .wallet-adapter-modal          → full-screen overlay
+ *   .wallet-adapter-modal-wrapper  → the dialog card
+ *   .wallet-adapter-modal-container → flex centering container
+ */
 
-/* Dimmed full-screen overlay, modal centered */
-.wallet-adapter-modal-wrapper {
+/* FULL-SCREEN OVERLAY */
+.wallet-adapter-modal {
   position: fixed !important;
   inset: 0 !important;
   z-index: 1000 !important;
+  background: rgba(3, 6, 5, 0.82) !important;
+  backdrop-filter: blur(12px) saturate(1.1) !important;
+  -webkit-backdrop-filter: blur(12px) saturate(1.1) !important;
+  opacity: 1 !important;
+  overflow-y: auto !important;
+}
+
+/* Centers the card */
+.wallet-adapter-modal-container {
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  background: rgba(3, 6, 5, 0.78) !important;
-  backdrop-filter: blur(12px) saturate(1.1) !important;
-  -webkit-backdrop-filter: blur(12px) saturate(1.1) !important;
-  padding: 1rem !important;
+  min-height: 100% !important;
+  min-height: 100dvh !important;
+  padding: 1.25rem !important;
+  box-sizing: border-box !important;
 }
 
-.wallet-adapter-modal {
+/* THE DIALOG CARD */
+.wallet-adapter-modal-wrapper {
   position: relative !important;
   top: auto !important;
   left: auto !important;
@@ -24,21 +40,19 @@
   margin: 0 auto !important;
   width: 100% !important;
   max-width: 380px !important;
+  min-height: 0 !important;
+  height: auto !important;
   background: #0f1512 !important;
-  border: 1px solid rgba(20, 241, 149, 0.2) !important;
+  border: 1px solid rgba(20, 241, 149, 0.22) !important;
   border-radius: 20px !important;
   box-shadow:
     0 0 0 1px rgba(255, 255, 255, 0.04),
     0 28px 70px rgba(0, 0, 0, 0.65),
-    0 0 48px rgba(20, 241, 149, 0.07) !important;
+    0 0 48px rgba(20, 241, 149, 0.08) !important;
   font-family: 'DM Sans', system-ui, -apple-system, sans-serif !important;
   overflow: hidden !important;
-  padding: 0 !important;
-}
-
-.wallet-adapter-modal-container {
-  padding: 0 !important;
-  width: 100% !important;
+  padding: 0 0 0.5rem !important;
+  box-sizing: border-box !important;
 }
 
 /* Title */
@@ -48,17 +62,17 @@
   letter-spacing: -0.03em !important;
   color: #f2f5f3 !important;
   line-height: 1.35 !important;
-  padding: 1.5rem 3rem 0.5rem 1.5rem !important;
+  padding: 1.5rem 3.25rem 0.65rem 1.5rem !important;
   text-align: left !important;
   margin: 0 !important;
 }
 
-/* Close */
+/* Close button */
 .wallet-adapter-modal-button-close {
   position: absolute !important;
   top: 1rem !important;
   right: 1rem !important;
-  background: rgba(255, 255, 255, 0.07) !important;
+  background: rgba(255, 255, 255, 0.08) !important;
   border: none !important;
   width: 34px !important;
   height: 34px !important;
@@ -84,8 +98,8 @@
 
 /* Wallet list */
 .wallet-adapter-modal-list {
-  margin: 0.65rem 0 0 !important;
-  padding: 0 1rem 1.15rem !important;
+  margin: 0.5rem 0 0 !important;
+  padding: 0 1rem 0.75rem !important;
   list-style: none !important;
   display: flex !important;
   flex-direction: column !important;
@@ -103,7 +117,7 @@
   min-height: 56px !important;
   padding: 0.75rem 1rem !important;
   border-radius: 14px !important;
-  background: rgba(255, 255, 255, 0.035) !important;
+  background: rgba(255, 255, 255, 0.04) !important;
   border: 1px solid rgba(255, 255, 255, 0.09) !important;
   color: #f2f5f3 !important;
   font-family: inherit !important;
@@ -124,9 +138,8 @@
 }
 
 .wallet-adapter-modal-list .wallet-adapter-button:not([disabled]):hover {
-  background: rgba(20, 241, 149, 0.09) !important;
-  border-color: rgba(20, 241, 149, 0.38) !important;
-  box-shadow: 0 0 0 1px rgba(20, 241, 149, 0.1) !important;
+  background: rgba(20, 241, 149, 0.1) !important;
+  border-color: rgba(20, 241, 149, 0.4) !important;
 }
 
 .wallet-adapter-modal-list .wallet-adapter-button:active {
@@ -148,25 +161,25 @@
   object-fit: contain !important;
 }
 
-/* "Detected" chip — right side */
+/* Detected chip */
 .wallet-adapter-modal-list .wallet-adapter-button > span {
   margin-left: auto !important;
   flex-shrink: 0 !important;
-  font-size: 0.7rem !important;
+  font-size: 0.68rem !important;
   font-weight: 700 !important;
-  letter-spacing: 0.03em !important;
+  letter-spacing: 0.04em !important;
   text-transform: uppercase !important;
-  color: #0a3d28 !important;
+  color: #04140c !important;
   background: #14f195 !important;
   border: none !important;
-  padding: 0.28rem 0.65rem !important;
+  padding: 0.3rem 0.65rem !important;
   border-radius: 999px !important;
   line-height: 1 !important;
 }
 
 /* More options */
 .wallet-adapter-modal-list-more {
-  margin: 0 1rem 1.15rem !important;
+  margin: 0.15rem 1rem 1rem !important;
   width: calc(100% - 2rem) !important;
   color: #8b968f !important;
   font-size: 0.84rem !important;
@@ -248,22 +261,17 @@
   background: rgba(20, 241, 149, 0.1) !important;
 }
 
-/* Phone: bottom sheet style */
+/* Phone: bottom sheet */
 @media (max-width: 480px) {
-  .wallet-adapter-modal-wrapper {
+  .wallet-adapter-modal-container {
     align-items: flex-end !important;
     padding: 0 !important;
   }
 
-  .wallet-adapter-modal {
+  .wallet-adapter-modal-wrapper {
     max-width: 100% !important;
     width: 100% !important;
     border-radius: 20px 20px 0 0 !important;
     border-bottom: none !important;
-  }
-
-  .wallet-adapter-modal-title {
-    padding-top: 1.35rem !important;
-    font-size: 1.1rem !important;
   }
 }
