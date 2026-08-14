@@ -631,8 +631,6 @@ select.input {
   margin-top: 1rem;
   padding-top: 1rem;
   border-top: 1px solid var(--border);
-  font-size: 0.875rem;
-  color: var(--text-muted);
 }
 
 .data-source {
@@ -1221,7 +1219,7 @@ select.input {
   line-height: 1.5;
 }
 
-/* Wallet adapter */
+/* Wallet header button only — full modal styles live in wallet-modal.css */
 .wallet-adapter-button {
   background-color: var(--surface-2) !important;
   border: 1px solid var(--border-strong) !important;
@@ -1230,20 +1228,6 @@ select.input {
   font-family: var(--font) !important;
   font-weight: 600 !important;
   font-size: 0.85rem !important;
-}
-
-.wallet-adapter-button-trigger {
-  background: linear-gradient(180deg, #2affb0, #14f195) !important;
-  color: #04140c !important;
-  border: none !important;
-}
-
-.wallet-adapter-modal-wrapper {
-  z-index: 100 !important;
-}
-
-.wallet-adapter-dropdown-list {
-  z-index: 90 !important;
 }
 
 /* Breakpoints */
