@@ -50,50 +50,59 @@
     0 28px 70px rgba(0, 0, 0, 0.65),
     0 0 48px rgba(20, 241, 149, 0.08) !important;
   font-family: 'DM Sans', system-ui, -apple-system, sans-serif !important;
-  overflow: hidden !important;
+  overflow: visible !important;
   padding: 0 0 0.5rem !important;
   box-sizing: border-box !important;
 }
 
-/* Title */
+/* Title — leave room for the X */
 .wallet-adapter-modal-title {
-  font-size: 1.2rem !important;
+  font-size: 1.15rem !important;
   font-weight: 700 !important;
   letter-spacing: -0.03em !important;
   color: #f2f5f3 !important;
   line-height: 1.35 !important;
-  padding: 1.5rem 3.25rem 0.65rem 1.5rem !important;
+  padding: 1.4rem 3.5rem 0.65rem 1.35rem !important;
   text-align: left !important;
   margin: 0 !important;
 }
 
-/* Close button */
+/* Close button — fully inside the card */
 .wallet-adapter-modal-button-close {
   position: absolute !important;
-  top: 1rem !important;
-  right: 1rem !important;
+  top: 14px !important;
+  right: 14px !important;
+  left: auto !important;
   background: rgba(255, 255, 255, 0.08) !important;
   border: none !important;
-  width: 34px !important;
-  height: 34px !important;
-  border-radius: 10px !important;
+  width: 32px !important;
+  height: 32px !important;
+  min-width: 32px !important;
+  min-height: 32px !important;
+  border-radius: 9px !important;
   padding: 0 !important;
+  margin: 0 !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
   cursor: pointer !important;
   transition: background 0.15s !important;
-  z-index: 2 !important;
+  z-index: 5 !important;
+  box-sizing: border-box !important;
+  line-height: 0 !important;
+  overflow: visible !important;
 }
 
 .wallet-adapter-modal-button-close:hover {
-  background: rgba(255, 255, 255, 0.14) !important;
+  background: rgba(255, 255, 255, 0.15) !important;
 }
 
 .wallet-adapter-modal-button-close svg {
   fill: #9aa49c !important;
-  width: 11px !important;
-  height: 11px !important;
+  width: 10px !important;
+  height: 10px !important;
+  display: block !important;
+  flex-shrink: 0 !important;
 }
 
 /* Wallet list */
