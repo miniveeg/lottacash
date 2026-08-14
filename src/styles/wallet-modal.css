@@ -51,7 +51,6 @@
     0 28px 70px rgba(0, 0, 0, 0.65),
     0 0 48px rgba(20, 241, 149, 0.08) !important;
   font-family: 'DM Sans', system-ui, -apple-system, sans-serif !important;
-  /* keep overflow hidden for radius, but give the X room via inset */
   overflow: hidden !important;
   padding: 0 0 0.75rem !important;
   box-sizing: border-box !important;
@@ -70,25 +69,22 @@
 }
 
 /*
- * Close button
- * Default library CSS uses large padding + absolute top/right which
- * can sit on the border-radius and look clipped. Override hard.
+ * Close button — roomy hit target, small centered glyph
+ * Library default uses a large padded SVG that overflows a tight box.
  */
 .wallet-adapter-modal-button-close {
   position: absolute !important;
-  top: 18px !important;
-  right: 18px !important;
+  top: 16px !important;
+  right: 16px !important;
   left: auto !important;
   bottom: auto !important;
-  background: rgba(255, 255, 255, 0.08) !important;
-  border: 1px solid rgba(255, 255, 255, 0.06) !important;
-  width: 28px !important;
-  height: 28px !important;
-  min-width: 28px !important;
-  min-height: 28px !important;
-  max-width: 28px !important;
-  max-height: 28px !important;
-  border-radius: 8px !important;
+  background: rgba(255, 255, 255, 0.07) !important;
+  border: none !important;
+  width: 36px !important;
+  height: 36px !important;
+  min-width: 36px !important;
+  min-height: 36px !important;
+  border-radius: 10px !important;
   padding: 0 !important;
   margin: 0 !important;
   display: inline-flex !important;
@@ -99,12 +95,12 @@
   z-index: 10 !important;
   box-sizing: border-box !important;
   line-height: 0 !important;
-  overflow: visible !important;
+  overflow: hidden !important;
   transform: none !important;
 }
 
 .wallet-adapter-modal-button-close:hover {
-  background: rgba(255, 255, 255, 0.16) !important;
+  background: rgba(255, 255, 255, 0.14) !important;
 }
 
 .wallet-adapter-modal-button-close:focus-visible {
@@ -112,17 +108,21 @@
   outline-offset: 2px !important;
 }
 
+/* Force the SVG small so it never fills the whole button */
 .wallet-adapter-modal-button-close svg {
   fill: #a8b2ab !important;
-  width: 10px !important;
-  height: 10px !important;
-  min-width: 10px !important;
-  min-height: 10px !important;
+  width: 12px !important;
+  height: 12px !important;
+  max-width: 12px !important;
+  max-height: 12px !important;
+  min-width: 12px !important;
+  min-height: 12px !important;
   display: block !important;
-  margin: 0 !important;
+  margin: 0 auto !important;
   padding: 0 !important;
-  flex-shrink: 0 !important;
+  flex: 0 0 12px !important;
   pointer-events: none !important;
+  transform: scale(1) !important;
 }
 
 .wallet-adapter-modal-button-close:hover svg {
