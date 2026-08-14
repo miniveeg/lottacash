@@ -10,6 +10,7 @@ import './styles/review-polish.css'
 import './styles/agent-pass.css'
 import './styles/fees.css'
 import './styles/auto-sign.css'
+import './styles/wallet-modal.css'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
