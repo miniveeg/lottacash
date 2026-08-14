@@ -26,7 +26,7 @@ import { useAppTick } from '../hooks/useAppTick'
 
 export function Settings() {
   const { publicKey, connected } = useWallet()
-  useAppTick()
+  const tick = useAppTick()
   const [health, setHealth] = useState<HealthInfo | null>(null)
   const [checking, setChecking] = useState(false)
   const [runningMon, setRunningMon] = useState(false)
@@ -79,7 +79,7 @@ export function Settings() {
 
   useEffect(() => {
     setAuto(getAutoSignSettings())
-  })
+  }, [tick])
 
   function clearLocalData() {
     const ok = window.confirm(
