@@ -27,6 +27,7 @@
   min-height: 100dvh !important;
   padding: 1.25rem !important;
   box-sizing: border-box !important;
+  overflow: visible !important;
 }
 
 /* THE DIALOG CARD */
@@ -50,65 +51,88 @@
     0 28px 70px rgba(0, 0, 0, 0.65),
     0 0 48px rgba(20, 241, 149, 0.08) !important;
   font-family: 'DM Sans', system-ui, -apple-system, sans-serif !important;
-  overflow: visible !important;
-  padding: 0 0 0.5rem !important;
+  /* keep overflow hidden for radius, but give the X room via inset */
+  overflow: hidden !important;
+  padding: 0 0 0.75rem !important;
   box-sizing: border-box !important;
 }
 
-/* Title — leave room for the X */
+/* Title — clear space under / beside the X */
 .wallet-adapter-modal-title {
   font-size: 1.15rem !important;
   font-weight: 700 !important;
   letter-spacing: -0.03em !important;
   color: #f2f5f3 !important;
   line-height: 1.35 !important;
-  padding: 1.4rem 3.5rem 0.65rem 1.35rem !important;
+  padding: 1.5rem 3.75rem 0.75rem 1.35rem !important;
   text-align: left !important;
   margin: 0 !important;
 }
 
-/* Close button — fully inside the card */
+/*
+ * Close button
+ * Default library CSS uses large padding + absolute top/right which
+ * can sit on the border-radius and look clipped. Override hard.
+ */
 .wallet-adapter-modal-button-close {
   position: absolute !important;
-  top: 14px !important;
-  right: 14px !important;
+  top: 18px !important;
+  right: 18px !important;
   left: auto !important;
+  bottom: auto !important;
   background: rgba(255, 255, 255, 0.08) !important;
-  border: none !important;
-  width: 32px !important;
-  height: 32px !important;
-  min-width: 32px !important;
-  min-height: 32px !important;
-  border-radius: 9px !important;
+  border: 1px solid rgba(255, 255, 255, 0.06) !important;
+  width: 28px !important;
+  height: 28px !important;
+  min-width: 28px !important;
+  min-height: 28px !important;
+  max-width: 28px !important;
+  max-height: 28px !important;
+  border-radius: 8px !important;
   padding: 0 !important;
   margin: 0 !important;
-  display: flex !important;
+  display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
   cursor: pointer !important;
   transition: background 0.15s !important;
-  z-index: 5 !important;
+  z-index: 10 !important;
   box-sizing: border-box !important;
   line-height: 0 !important;
   overflow: visible !important;
+  transform: none !important;
 }
 
 .wallet-adapter-modal-button-close:hover {
-  background: rgba(255, 255, 255, 0.15) !important;
+  background: rgba(255, 255, 255, 0.16) !important;
+}
+
+.wallet-adapter-modal-button-close:focus-visible {
+  outline: 2px solid rgba(20, 241, 149, 0.5) !important;
+  outline-offset: 2px !important;
 }
 
 .wallet-adapter-modal-button-close svg {
-  fill: #9aa49c !important;
+  fill: #a8b2ab !important;
   width: 10px !important;
   height: 10px !important;
+  min-width: 10px !important;
+  min-height: 10px !important;
   display: block !important;
+  margin: 0 !important;
+  padding: 0 !important;
   flex-shrink: 0 !important;
+  pointer-events: none !important;
+}
+
+.wallet-adapter-modal-button-close:hover svg {
+  fill: #f2f5f3 !important;
 }
 
 /* Wallet list */
 .wallet-adapter-modal-list {
-  margin: 0.5rem 0 0 !important;
-  padding: 0 1rem 0.75rem !important;
+  margin: 0.35rem 0 0 !important;
+  padding: 0 1rem 0.5rem !important;
   list-style: none !important;
   display: flex !important;
   flex-direction: column !important;
@@ -188,7 +212,7 @@
 
 /* More options */
 .wallet-adapter-modal-list-more {
-  margin: 0.15rem 1rem 1rem !important;
+  margin: 0.15rem 1rem 0.85rem !important;
   width: calc(100% - 2rem) !important;
   color: #8b968f !important;
   font-size: 0.84rem !important;
