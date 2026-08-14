@@ -5,6 +5,8 @@ import { ToastProvider } from './components/Toast'
 import { ScrollToTop } from './components/ScrollToTop'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { OfflineBanner } from './components/OfflineBanner'
+import { AutoSignBanner } from './components/AutoSignBanner'
+import { AutoSignWorker } from './components/AutoSignWorker'
 import { SkipLink } from './components/SkipLink'
 import { Home } from './pages/Home'
 import { Dashboard } from './pages/Dashboard'
@@ -22,8 +24,10 @@ export default function App() {
     <ToastProvider>
       <SkipLink />
       <ScrollToTop />
+      <AutoSignWorker />
       <div className="app">
         <OfflineBanner />
+        <AutoSignBanner />
         <Topbar />
         <main id="main-content" className="main" tabIndex={-1}>
           <ErrorBoundary>
@@ -48,7 +52,8 @@ export default function App() {
             <Link to="/help">Help</Link>
           </p>
           <p className="disclaimer">
-            Copy trading can lose money. You approve every trade. This is not financial advice.
+            Copy trading can lose money. Manual mode: you approve every trade. Experimental auto-sign
+            can place trades you did not individually review. Not financial advice.
           </p>
         </footer>
       </div>

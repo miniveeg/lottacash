@@ -15,9 +15,18 @@ import {
   getFeeWallet,
   getPlatformFeeBps,
 } from '../lib/fees'
+import {
+  getAutoSignSettings,
+  saveAutoSignSettings,
+  disableAutoSign,
+  clearAutoAttempted,
+  type AutoSignSettings,
+} from '../lib/autoSign'
+import { useAppTick } from '../hooks/useAppTick'
 
 export function Settings() {
   const { publicKey, connected } = useWallet()
+  useAppTick()
   const [health, setHealth] = useState<HealthInfo | null>(null)
   const [checking, setChecking] = useState(false)
   const [runningMon, setRunningMon] = useState(false)
@@ -26,6 +35,11 @@ export function Settings() {
     totalTradeSol: number
     totalFeeSolEstimate: number
   } | null>(null)
+  const [auto, setAuto] = useState<AutoSignSettings>(() => getAutoSignSettings())
+  const [ack1, setAck1] = useState(false)
+  const [ack2, setAck2] = useState(false)
+  const [ack3, setAck3] = useState(false)
+  const [ack4, setAck4] = useState(false)
   const { push } = useToast()
 
   async function recheck() {
@@ -63,6 +77,10 @@ export function Settings() {
       .catch(() => setFeeStats(null))
   }, [])
 
+  useEffect(() => {
+    setAuto(getAutoSignSettings())
+  })
+
   function clearLocalData() {
     const ok = window.confirm(
       'Clear copy settings and signals saved in this browser? This cannot be undone.'
@@ -71,6 +89,53 @@ export function Settings() {
     clearCopyConfigs()
     clearSignals()
     push('Local data cleared', 'success')
+  }
+
+  function tryEnableAutoSign() {
+    if (!connected) {
+      push('Connect your wallet first', 'error')
+      return
+    }
+    if (!ack1 || !ack2 || !ack3 || !ack4) {
+      push('Check all four risk acknowledgements first', 'error')
+      return
+    }
+    const ok = window.confirm(
+      'FINAL WARNING\n\n' +
+        'Experimental auto-sign will try to place copy trades WITHOUT you reviewing each one.\n\n' +
+        '• You may buy tokens you never wanted\n' +
+        '• You may lose money quickly\n' +
+        '• Bugs, lag, or bad signals can still fire trades\n' +
+        '• Your wallet may still pop up unless you enabled auto-approve (even riskier)\n' +
+        '• Only works while this browser tab stays open\n\n' +
+        'Click OK only if you accept total responsibility for the outcomes.'
+    )
+    if (!ok) return
+
+    clearAutoAttempted()
+    const next = saveAutoSignSettings({
+      enabled: true,
+      acknowledged: true,
+      maxSolPerTrade: auto.maxSolPerTrade,
+      maxPerSession: auto.maxPerSession,
+      pollSeconds: auto.pollSeconds,
+      onlyWhenFocused: auto.onlyWhenFocused,
+      sessionSigned: 0,
+      sessionFailed: 0,
+      lastError: undefined,
+    })
+    setAuto(next)
+    push('Experimental auto-sign ENABLED', 'info')
+  }
+
+  function turnOffAutoSign() {
+    const next = disableAutoSign('Turned off in Settings')
+    setAuto(next)
+    setAck1(false)
+    setAck2(false)
+    setAck3(false)
+    setAck4(false)
+    push('Auto-sign disabled', 'info')
   }
 
   const apiOk = health === null ? null : !!health.ok
@@ -82,9 +147,142 @@ export function Settings() {
       <div className="page-header row-header">
         <div>
           <h1>Settings</h1>
-          <p>Connection, fees, monitor, and safety.</p>
+          <p>Connection, fees, experimental auto-sign, monitor, and safety.</p>
         </div>
         <StatusDot ok={apiOk} />
+      </div>
+
+      <div className="settings-card danger-zone auto-sign-card">
+        <div className="exp-badge">EXPERIMENTAL</div>
+        <h3>Auto-sign mode</h3>
+        <p className="auto-sign-warning">
+          <strong>This is experimental and dangerous.</strong> When on, LottaCash will automatically
+          attempt to sign pending copy-trade signals while this tab is open. You may execute trades
+          you did not look at. Signals can be wrong, late, or based on wallets that rug. You can lose
+          money — possibly all of the SOL you allow per trade. This is not financial advice. Use only
+          with money you can afford to lose.
+        </p>
+        <ul className="auto-sign-list">
+          <li>Does not run if you close the tab or put the device to sleep.</li>
+          <li>
+            Your wallet extension may still ask for approval on each trade unless you separately
+            enabled auto-approve in the wallet (which increases risk further).
+          </li>
+          <li>Rejecting a wallet popup pauses auto-sign so it does not spam you.</li>
+          <li>Hard caps below limit size and how many autos fire this session.</li>
+        </ul>
+
+        <div className="field">
+          <label>Max SOL per auto trade</label>
+          <input
+            type="number"
+            min={0.01}
+            max={5}
+            step={0.01}
+            value={auto.maxSolPerTrade}
+            disabled={auto.enabled}
+            onChange={(e) =>
+              setAuto(
+                saveAutoSignSettings({
+                  maxSolPerTrade: Number(e.target.value),
+                })
+              )
+            }
+          />
+        </div>
+        <div className="field">
+          <label>Max auto trades this session</label>
+          <input
+            type="number"
+            min={1}
+            max={100}
+            step={1}
+            value={auto.maxPerSession}
+            disabled={auto.enabled}
+            onChange={(e) =>
+              setAuto(
+                saveAutoSignSettings({
+                  maxPerSession: Number(e.target.value),
+                })
+              )
+            }
+          />
+        </div>
+        <div className="field">
+          <label>Scan interval (seconds)</label>
+          <input
+            type="number"
+            min={8}
+            max={120}
+            step={1}
+            value={auto.pollSeconds}
+            disabled={auto.enabled}
+            onChange={(e) =>
+              setAuto(
+                saveAutoSignSettings({
+                  pollSeconds: Number(e.target.value),
+                })
+              )
+            }
+          />
+        </div>
+        <label className="checkbox-label">
+          <input
+            type="checkbox"
+            checked={auto.onlyWhenFocused}
+            disabled={auto.enabled}
+            onChange={(e) =>
+              setAuto(saveAutoSignSettings({ onlyWhenFocused: e.target.checked }))
+            }
+          />
+          Only auto-sign while this tab is focused (recommended)
+        </label>
+
+        {!auto.enabled && (
+          <div className="ack-box">
+            <p>
+              <strong>You must check all boxes to enable:</strong>
+            </p>
+            <label className="checkbox-label">
+              <input type="checkbox" checked={ack1} onChange={(e) => setAck1(e.target.checked)} />
+              I understand auto-sign is experimental and may place trades I did not review.
+            </label>
+            <label className="checkbox-label">
+              <input type="checkbox" checked={ack2} onChange={(e) => setAck2(e.target.checked)} />
+              I understand I can lose money, including from bad signals, lag, bugs, or rugs.
+            </label>
+            <label className="checkbox-label">
+              <input type="checkbox" checked={ack3} onChange={(e) => setAck3(e.target.checked)} />
+              I understand this only works while the tab is open and is not a guaranteed bot.
+            </label>
+            <label className="checkbox-label">
+              <input type="checkbox" checked={ack4} onChange={(e) => setAck4(e.target.checked)} />
+              I accept full responsibility; LottaCash is not liable for my trading outcomes.
+            </label>
+          </div>
+        )}
+
+        <div className="form-actions" style={{ marginTop: '0.85rem' }}>
+          {auto.enabled ? (
+            <button className="btn danger" onClick={turnOffAutoSign}>
+              Turn off auto-sign
+            </button>
+          ) : (
+            <button
+              className="btn danger"
+              onClick={tryEnableAutoSign}
+              disabled={!ack1 || !ack2 || !ack3 || !ack4 || !connected}
+            >
+              Enable experimental auto-sign
+            </button>
+          )}
+        </div>
+
+        <p className="hint" style={{ marginTop: '0.75rem' }}>
+          Status: {auto.enabled ? 'ON' : 'off'} · session signed {auto.sessionSigned}/
+          {auto.maxPerSession} · failed {auto.sessionFailed}
+          {auto.lastError ? ` · last: ${auto.lastError}` : ''}
+        </p>
       </div>
 
       <div className="settings-card">
@@ -121,10 +319,6 @@ export function Settings() {
             </div>
           )}
         </div>
-        <p className="hint" style={{ marginTop: '0.65rem' }}>
-          Example: user copies with $5 → you earn about $0.025 at 0.5%. Same math in SOL: 1 SOL trade
-          → 0.005 SOL fee.
-        </p>
       </div>
 
       <div className="settings-card">

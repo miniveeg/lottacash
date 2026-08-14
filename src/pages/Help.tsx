@@ -27,6 +27,25 @@ export function Help() {
         </p>
       </section>
 
+      <section className="panel help-block danger-soft">
+        <h2>Experimental auto-sign</h2>
+        <p>
+          <strong>Off by default. High risk.</strong> In Settings you can enable an experimental
+          mode that automatically tries to sign pending copy signals while this browser tab is open.
+        </p>
+        <ul className="plain-list">
+          <li>Trades may happen that you never individually reviewed.</li>
+          <li>Bad signals, lag, rugs, or bugs can still move your SOL.</li>
+          <li>Closing the tab stops it. It is not a 24/7 server bot by itself.</li>
+          <li>Your wallet may still prompt unless you turned on auto-approve (even riskier).</li>
+          <li>Use tight max SOL and session limits. Money you cannot afford to lose only.</li>
+        </ul>
+        <p>
+          Manage it under <Link to="/settings">Settings → Auto-sign</Link>. A red banner appears
+          site-wide while it is on.
+        </p>
+      </section>
+
       <section className="panel help-block">
         <h2>How does LottaCash make money?</h2>
         <FeeNotice />
@@ -96,6 +115,9 @@ export function Help() {
           <li>
             <Link to="/activity">Activity</Link> — pending trades
           </li>
+          <li>
+            <Link to="/settings">Settings</Link> — fees, monitor, experimental auto-sign
+          </li>
         </ul>
       </section>
 
@@ -104,6 +126,7 @@ export function Help() {
         <ul className="plain-list">
           <li>Start tiny until you trust the flow.</li>
           <li>Always set a max cap.</li>
+          <li>Prefer manual sign until you really understand signals.</li>
           <li>Never share your seed phrase.</li>
           <li>Assume any memecoin can go to zero.</li>
         </ul>
