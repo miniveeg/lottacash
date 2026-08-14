@@ -8,6 +8,7 @@ import './styles/global.css'
 import './styles/responsive-extra.css'
 import './styles/review-polish.css'
 import './styles/agent-pass.css'
+import './styles/fees.css'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

@@ -4,26 +4,27 @@ export function FeeNotice({ tradeSol }: { tradeSol?: number }) {
   if (!feesEnabled()) {
     return (
       <p className="fee-notice muted">
-        Platform fee: off (set <code>VITE_FEE_WALLET</code> to enable).
+        Platform fee: not active yet (owner must set <code>VITE_FEE_WALLET</code>).
       </p>
     )
   }
 
-  const est =
-    tradeSol !== undefined ? estimateFeeSol(tradeSol) : null
+  const est = tradeSol !== undefined ? estimateFeeSol(tradeSol) : null
 
   return (
     <div className="fee-notice">
       <strong>Platform fee {formatFeePercent()}</strong>
       <span>
-        Applied on each signed copy swap via Jupiter (non-custodial).{' '}
+        Taken on each signed copy swap through Jupiter. You still hold your keys — the fee is part of
+        the swap you approve.
         {est !== null && (
           <>
-            This trade ≈ <strong>{est.toFixed(4)} SOL</strong> fee.
+            {' '}
+            This size ≈ <strong>{est.toFixed(4)} SOL</strong>.
           </>
         )}
       </span>
-      <span className="muted">Config: {getPlatformFeeBps()} bps</span>
+      <span className="muted">{getPlatformFeeBps()} bps · non-custodial</span>
     </div>
   )
 }

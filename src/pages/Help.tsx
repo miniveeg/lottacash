@@ -1,5 +1,7 @@
 import { Link } from 'react-router-dom'
 import { Steps } from '../components/Steps'
+import { FeeNotice } from '../components/FeeNotice'
+import { formatFeePercent, feesEnabled } from '../lib/fees'
 
 export function Help() {
   return (
@@ -26,14 +28,32 @@ export function Help() {
       </section>
 
       <section className="panel help-block">
+        <h2>How does LottaCash make money?</h2>
+        <FeeNotice />
+        <p>
+          {feesEnabled() ? (
+            <>
+              A <strong>{formatFeePercent()}</strong> platform fee is included in each Jupiter swap
+              you sign when copying a trade (buy or sell). It is taken on-chain as part of that
+              transaction — not by moving funds to a custodial account.
+            </>
+          ) : (
+            <>
+              When enabled by the operator, a small percentage (default 0.5%) is taken on each copy
+              swap via Jupiter’s platform fee feature.
+            </>
+          )}
+        </p>
+      </section>
+
+      <section className="panel help-block">
         <h2>First-time setup</h2>
         <Steps
           items={[
-            'Click Connect in the top right and approve in your wallet app.',
+            'Connect Phantom or Solflare.',
             'Go to Leaderboard → pick someone → Copy.',
-            'Set "SOL per trade" to a small number (like 0.1) while learning.',
-            'Set a Max SOL cap (safety limit for one trade).',
-            'Save. Open Activity when you want to test a demo signal.',
+            'Set a small fixed SOL size + max cap, then save.',
+            'Open Activity when you want to test a demo signal.',
           ]}
         />
       </section>
@@ -42,31 +62,19 @@ export function Help() {
         <h2>Fixed vs proportional size</h2>
         <ul className="plain-list">
           <li>
-            <strong>Fixed</strong> — every copy uses the same SOL amount (e.g. always 0.25 SOL).
-            Easiest for beginners.
+            <strong>Fixed</strong> — same SOL every time (easiest).
           </li>
           <li>
-            <strong>Proportional / 1:1</strong> — try to match the leader’s size (capped by your max).
-            More advanced; can get large quickly.
+            <strong>Match size</strong> — try to mirror the leader (still capped by your max).
           </li>
         </ul>
       </section>
 
       <section className="panel help-block">
-        <h2>What is a "signal"?</h2>
+        <h2>What is a signal?</h2>
         <p>
-          A notice that a wallet you follow just traded. You review it on the Activity page and
-          choose <strong>Sign swap</strong> or dismiss. Signing opens your wallet to approve the
-          Jupiter exchange.
-        </p>
-      </section>
-
-      <section className="panel help-block">
-        <h2>Why might I get a worse price than them?</h2>
-        <p>
-          Speed. By the time you see the signal and sign, the market may have moved. That is normal
-          for copy trading. Smaller size and higher-quality wallets help, but nothing removes this
-          risk.
+          A notice that a wallet you follow traded. On Activity you can <strong>Sign swap</strong> or
+          dismiss. Signing opens your wallet to approve the Jupiter exchange.
         </p>
       </section>
 
@@ -74,19 +82,19 @@ export function Help() {
         <h2>Where do I click?</h2>
         <ul className="plain-list">
           <li>
-            <Link to="/dashboard">Dashboard</Link> — overview of balance and active copies
+            <Link to="/dashboard">Dashboard</Link> — overview
           </li>
           <li>
-            <Link to="/leaderboard">Leaderboard</Link> — ranked wallets to copy
+            <Link to="/leaderboard">Leaderboard</Link> — wallets to copy
           </li>
           <li>
-            <Link to="/tools">Tools</Link> — look up any address, size calculator
+            <Link to="/tools">Tools</Link> — lookup any address
           </li>
           <li>
-            <Link to="/copies">Copies</Link> — turn follows on/off
+            <Link to="/copies">Copies</Link> — manage follows
           </li>
           <li>
-            <Link to="/activity">Activity</Link> — pending trades to sign
+            <Link to="/activity">Activity</Link> — pending trades
           </li>
         </ul>
       </section>
@@ -94,9 +102,9 @@ export function Help() {
       <section className="panel help-block danger-soft">
         <h2>Safety rules of thumb</h2>
         <ul className="plain-list">
-          <li>Start tiny (0.05–0.2 SOL) until you trust the flow.</li>
+          <li>Start tiny until you trust the flow.</li>
           <li>Always set a max cap.</li>
-          <li>Never share your seed phrase or private key with any site.</li>
+          <li>Never share your seed phrase.</li>
           <li>Assume any memecoin can go to zero.</li>
         </ul>
       </section>
