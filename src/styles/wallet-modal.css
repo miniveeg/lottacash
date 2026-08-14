@@ -69,7 +69,8 @@
 }
 
 /*
- * Close button — roomy hit target, small centered glyph
+ * Close button
+ * Hide the library SVG (its size is tied to the control). Draw our own ×.
  */
 .wallet-adapter-modal-button-close {
   position: absolute !important;
@@ -90,16 +91,30 @@
   align-items: center !important;
   justify-content: center !important;
   cursor: pointer !important;
-  transition: background 0.15s !important;
+  transition: background 0.15s, color 0.15s !important;
   z-index: 10 !important;
   box-sizing: border-box !important;
   line-height: 0 !important;
   overflow: hidden !important;
   transform: none !important;
+  font-size: 0 !important;
+  color: #a8b2ab !important;
+}
+
+.wallet-adapter-modal-button-close::before {
+  content: '×' !important;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif !important;
+  font-size: 22px !important;
+  font-weight: 400 !important;
+  line-height: 1 !important;
+  color: inherit !important;
+  display: block !important;
+  pointer-events: none !important;
 }
 
 .wallet-adapter-modal-button-close:hover {
   background: rgba(255, 255, 255, 0.14) !important;
+  color: #f2f5f3 !important;
 }
 
 .wallet-adapter-modal-button-close:focus-visible {
@@ -107,26 +122,13 @@
   outline-offset: 2px !important;
 }
 
-/* Smaller X glyph */
+/* Hide library SVG completely */
 .wallet-adapter-modal-button-close svg {
-  fill: #a8b2ab !important;
-  width: 9px !important;
-  height: 9px !important;
-  max-width: 9px !important;
-  max-height: 9px !important;
-  min-width: 0 !important;
-  min-height: 0 !important;
-  display: block !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  flex: none !important;
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  opacity: 0 !important;
   pointer-events: none !important;
-  transform: scale(0.75) !important;
-  transform-origin: center !important;
-}
-
-.wallet-adapter-modal-button-close:hover svg {
-  fill: #f2f5f3 !important;
 }
 
 /* Wallet list */
